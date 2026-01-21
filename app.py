@@ -41,14 +41,18 @@ logger = logging.getLogger(__name__)
 # =================================================
 @app.context_processor
 def inject_stats():
+    """
+    Global safety net so `stats` is NEVER undefined in templates
+    """
     return {
         "stats": {
             "total_medicines": 0,
+            "total_value": 0,
             "low_stock": 0,
-            "expired": 0,
-            "total_value": 0
+            "expired": 0
         }
     }
+
 
 # =================================================
 # HELPERS
