@@ -433,17 +433,21 @@ def logout():
     flash('You have been logged out successfully.', 'success')
     return redirect(url_for('index'))
 
+# ---------------------------------------
 # Dashboard Page
+# ---------------------------------------
 @app.route("/dashboard")
 @login_required
 def dashboard():
     total_medicines = 0
-    total_value = 0   # will stay 0 because price is not stored
+    total_value = 0  # price not stored yet
     low_stock = 0
     expired = 0
 
     try:
-        response = medicines_table.scan()
+        response = medicines_table.scan(
+            FilterExpression=Attr('user_id').eq(session['user_id'])
+        )
         medicines = response.get("Items", [])
     except Exception:
         medicines = []
@@ -456,11 +460,9 @@ def dashboard():
         quantity = int(med.get("quantity", 0))
         threshold = int(med.get("threshold", 0))
 
-        # Low stock logic (CORRECT)
         if quantity <= threshold:
             low_stock += 1
 
-        # Expired logic (CORRECT)
         expiry_str = med.get("expiration_date")
         if expiry_str:
             try:
@@ -472,216 +474,85 @@ def dashboard():
 
     stats = {
         "total_medicines": total_medicines,
-        "total_value": total_value,  # until price is added
+        "total_value": total_value,
         "low_stock": low_stock,
         "expired": expired
     }
 
     return render_template("dashboard.html", stats=stats)
+
+
+# ---------------------------------------
 # Medicines List Page
+# ---------------------------------------
 @app.route('/medicines')
 @login_required
 def medicines():
     try:
-        # Get user's medicines from DynamoDB
         response = medicines_table.scan(
             FilterExpression=Attr('user_id').eq(session['user_id'])
         )
         medicines_list = response.get('Items', [])
-        
-        # Sort medicines by name
         medicines_list.sort(key=lambda x: x.get('name', '').lower())
-        
         return render_template('medicines.html', medicines=medicines_list)
     except Exception as e:
         logger.error(f"Error fetching medicines: {e}")
-        flash('An error occurred loading medicines.', 'danger')
+        flash('Error loading medicines.', 'danger')
         return render_template('medicines.html', medicines=[])
 
-# Add Medicine Page
+
+# ---------------------------------------
+# Add Medicine
+# ---------------------------------------
 @app.route('/medicines/add', methods=['GET', 'POST'])
 @login_required
 def add_medicine():
     if request.method == 'POST':
-        # Form validation
         name = request.form.get('name', '').strip()
         category = request.form.get('category', '').strip()
         quantity = request.form.get('quantity', '0')
         threshold = request.form.get('threshold', '0')
         expiration_date = request.form.get('expiration_date', '')
-        
+
         if not all([name, category, quantity, threshold, expiration_date]):
             flash('All fields are required', 'danger')
             return render_template('add_medicine.html')
-        
+
         try:
-            quantity_int = int(quantity)
-            threshold_int = int(threshold)
-            
-            if quantity_int < 0 or threshold_int < 0:
-                flash('Quantity and threshold must be positive numbers', 'danger')
-                return render_template('add_medicine.html')
-            
-            # Generate unique medicine ID
+            quantity = int(quantity)
+            threshold = int(threshold)
+
             medicine_id = str(uuid.uuid4())
-            
-            # Store medicine in DynamoDB
+
             medicines_table.put_item(
                 Item={
                     'medicine_id': medicine_id,
                     'user_id': session['user_id'],
                     'name': name,
                     'category': category,
-                    'quantity': quantity_int,
-                    'threshold': threshold_int,
+                    'quantity': quantity,
+                    'threshold': threshold,
                     'expiration_date': expiration_date,
                     'created_at': datetime.now().isoformat()
                 }
             )
-            
-            logger.info(f"Medicine added: {name} by {session['username']}")
-            
-            # Check if stock is low immediately after adding
-            if quantity_int <= threshold_int:
-                send_low_stock_alert(name, quantity_int, threshold_int, session.get('email'))
-            
-            flash(f"Medicine '{name}' added successfully!", 'success')
+
+            if quantity <= threshold:
+                send_low_stock_alert(name, quantity, threshold, session.get('email'))
+
+            flash('Medicine added successfully!', 'success')
             return redirect(url_for('medicines'))
-            
-        except ValueError:
-            flash('Quantity and threshold must be valid numbers', 'danger')
-            return render_template('add_medicine.html')
+
         except Exception as e:
-            logger.error(f"Error adding medicine: {e}")
-            flash('An error occurred while adding the medicine. Please try again.', 'danger')
-            return render_template('add_medicine.html')
-        
+            logger.error(f"Add medicine error: {e}")
+            flash('Error adding medicine.', 'danger')
+
     return render_template('add_medicine.html')
 
-# Edit Medicine Page
-@app.route('/medicines/edit/<medicine_id>', methods=['GET', 'POST'])
-@login_required
-def edit_medicine(medicine_id):
-    try:
-        # Get medicine details from DynamoDB
-        response = medicines_table.get_item(Key={'medicine_id': medicine_id})
-        medicine = response.get('Item')
-        
-        if not medicine:
-            flash('Medicine not found!', 'danger')
-            return redirect(url_for('medicines'))
-        
-        # Security check - verify the logged-in user owns this medicine
-        if medicine.get('user_id') != session['user_id']:
-            flash('You are not authorized to edit this medicine.', 'danger')
-            return redirect(url_for('medicines'))
-        
-        if request.method == 'POST':
-            # Form validation
-            name = request.form.get('name', '').strip()
-            category = request.form.get('category', '').strip()
-            quantity = request.form.get('quantity', '0')
-            threshold = request.form.get('threshold', '0')
-            expiration_date = request.form.get('expiration_date', '')
-            
-            if not all([name, category, quantity, threshold]):
-                flash('All fields are required', 'danger')
-                return render_template('edit_medicine.html', medicine=medicine)
-            
-            try:
-                old_quantity = int(medicine.get('quantity', 0))
-                new_quantity = int(quantity)
-                new_threshold = int(threshold)
-                
-                if new_quantity < 0 or new_threshold < 0:
-                    flash('Quantity and threshold must be positive numbers', 'danger')
-                    return render_template('edit_medicine.html', medicine=medicine)
-                
-                # Update medicine in DynamoDB
-                medicines_table.update_item(
-                    Key={'medicine_id': medicine_id},
-                    UpdateExpression="""
-                        SET #name = :name, 
-                            category = :category, 
-                            quantity = :quantity, 
-                            threshold = :threshold, 
-                            expiration_date = :expiration_date,
-                            updated_at = :updated_at
-                    """,
-                    ConditionExpression='attribute_exists(medicine_id)',
-                    ExpressionAttributeNames={
-                        '#name': 'name'
-                    },
-                    ExpressionAttributeValues={
-                        ':name': name,
-                        ':category': category,
-                        ':quantity': new_quantity,
-                        ':threshold': new_threshold,
-                        ':expiration_date': expiration_date,
-                        ':updated_at': datetime.now().isoformat()
-                    }
-                )
 
-                logger.info(f"Medicine updated: {name} (ID: {medicine_id}) by {session['username']}")
-                
-                # Check if stock is low after update
-                if new_quantity <= new_threshold:
-                    # Only send alert if quantity decreased or is newly below threshold
-                    if new_quantity < old_quantity or old_quantity > medicine.get('threshold', 0):
-                        send_low_stock_alert(name, new_quantity, new_threshold, session.get('email'))
-
-                flash(f"Medicine '{name}' updated successfully!", 'success')
-                return redirect(url_for('medicines'))
-                
-            except ValueError:
-                flash('Quantity and threshold must be valid numbers', 'danger')
-                return render_template('edit_medicine.html', medicine=medicine)
-            except medicines_table.meta.client.exceptions.ConditionalCheckFailedException:
-                flash('Medicine not found. Update failed.', 'danger')
-                return redirect(url_for('medicines'))
-            except Exception as e:
-                logger.error(f"Error updating medicine: {e}")
-                flash(f"Error updating medicine: {str(e)}", 'danger')
-                return render_template('edit_medicine.html', medicine=medicine)
-            
-        return render_template('edit_medicine.html', medicine=medicine)
-    except Exception as e:
-        logger.error(f"Error in edit_medicine: {e}")
-        flash('An error occurred. Please try again.', 'danger')
-        return redirect(url_for('medicines'))
-
-# Delete Medicine Route
-@app.route('/medicines/delete/<medicine_id>', methods=['POST'])
-@login_required
-def delete_medicine(medicine_id):
-    try:
-        # Get medicine details before deletion
-        response = medicines_table.get_item(Key={'medicine_id': medicine_id})
-        medicine = response.get('Item')
-        
-        if not medicine:
-            flash('Medicine not found.', 'danger')
-            return redirect(url_for('medicines'))
-        
-        # Security check - verify the logged-in user owns this medicine
-        if medicine.get('user_id') != session['user_id']:
-            flash('You are not authorized to delete this medicine.', 'danger')
-            return redirect(url_for('medicines'))
-        
-        medicine_name = medicine.get('name', 'Unknown')
-        
-        # Delete medicine from DynamoDB
-        medicines_table.delete_item(Key={'medicine_id': medicine_id})
-        
-        logger.info(f"Medicine deleted: {medicine_name} (ID: {medicine_id}) by {session['username']}")
-        flash(f"Medicine '{medicine_name}' deleted successfully.", 'success')
-    except Exception as e:
-        logger.error(f"Error deleting medicine: {e}")
-        flash('An error occurred while deleting the medicine.', 'danger')
-    
-    return redirect(url_for('medicines'))
-
+# ---------------------------------------
 # Alerts Page
+# ---------------------------------------
 @app.route('/alerts')
 @login_required
 def alerts():
@@ -689,102 +560,41 @@ def alerts():
         response = medicines_table.scan(
             FilterExpression=Attr('user_id').eq(session['user_id'])
         )
-        all_medicines = response.get('Items', [])
-        
-        # Filter low stock items
-        low_stock_medicines = [
-            m for m in all_medicines 
-            if int(m.get('quantity', 0)) <= int(m.get('threshold', 0))
-        ]
-        
-        # Filter expiring soon (within 30 days)
+        medicines = response.get('Items', [])
+
+        low_stock = [m for m in medicines if int(m.get('quantity', 0)) <= int(m.get('threshold', 0))]
+
         expiring_soon = []
         today = datetime.now()
-        
-        for m in all_medicines:
+
+        for m in medicines:
             if m.get('expiration_date'):
                 try:
-                    expiry_date = datetime.strptime(m['expiration_date'], '%Y-%m-%d')
-                    days_diff = (expiry_date - today).days
-                    
-                    if 0 <= days_diff <= 30:
-                        m['days_remaining'] = days_diff
+                    expiry = datetime.strptime(m['expiration_date'], '%Y-%m-%d')
+                    days = (expiry - today).days
+                    if 0 <= days <= 30:
+                        m['days_remaining'] = days
                         expiring_soon.append(m)
-                except (ValueError, TypeError):
+                except ValueError:
                     pass
-        
-        # Sort by days remaining
+
         expiring_soon.sort(key=lambda x: x.get('days_remaining', 999))
-        
-        return render_template('alerts.html', 
-                             low_stock=low_stock_medicines,
-                             expiring_soon=expiring_soon)
+
+        return render_template(
+            'alerts.html',
+            low_stock=low_stock,
+            expiring_soon=expiring_soon
+        )
+
     except Exception as e:
-        logger.error(f"Error loading alerts: {e}")
-        flash('Error loading alerts', 'danger')
+        logger.error(f"Alerts error: {e}")
+        flash('Error loading alerts.', 'danger')
         return render_template('alerts.html', low_stock=[], expiring_soon=[])
 
-# Update Stock (Quick Update via AJAX)
-@app.route('/medicines/update-stock/<medicine_id>', methods=['POST'])
-@login_required
-def update_stock(medicine_id):
-    try:
-        quantity_change = int(request.form.get('quantity_change', 0))
-        action = request.form.get('action')  # 'add' or 'remove'
-        
-        # Get current medicine data
-        response = medicines_table.get_item(Key={'medicine_id': medicine_id})
-        medicine = response.get('Item')
-        
-        if not medicine:
-            return jsonify({'success': False, 'message': 'Medicine not found'})
-        
-        # Security check
-        if medicine.get('user_id') != session['user_id']:
-            return jsonify({'success': False, 'message': 'Unauthorized'})
-        
-        current_quantity = int(medicine['quantity'])
-        threshold = int(medicine['threshold'])
-        medicine_name = medicine['name']
-        
-        # Calculate new quantity
-        if action == 'add':
-            new_quantity = current_quantity + quantity_change
-        elif action == 'remove':
-            new_quantity = max(0, current_quantity - quantity_change)
-        else:
-            return jsonify({'success': False, 'message': 'Invalid action'})
-        
-        # Update quantity
-        medicines_table.update_item(
-            Key={'medicine_id': medicine_id},
-            UpdateExpression='SET quantity = :quantity, updated_at = :updated',
-            ExpressionAttributeValues={
-                ':quantity': new_quantity,
-                ':updated': datetime.now().isoformat()
-            }
-        )
-        
-        logger.info(f"Stock updated: {medicine_name} - {action} {quantity_change} (New: {new_quantity})")
-        
-        # Check for low stock alert
-        if new_quantity <= threshold and new_quantity < current_quantity:
-            send_low_stock_alert(medicine_name, new_quantity, threshold, session.get('email'))
-        
-        return jsonify({
-            'success': True, 
-            'message': 'Stock updated successfully',
-            'new_quantity': new_quantity,
-            'low_stock': new_quantity <= threshold
-        })
-        
-    except ValueError:
-        return jsonify({'success': False, 'message': 'Invalid quantity'})
-    except Exception as e:
-        logger.error(f"Stock update error: {e}")
-        return jsonify({'success': False, 'message': str(e)})
 
-# Reports Page
+# ---------------------------------------
+# Reports Page (ONLY ONE ROUTE)
+# ---------------------------------------
 @app.route('/reports')
 @login_required
 def reports():
@@ -794,14 +604,8 @@ def reports():
     medicines = response.get('Items', [])
 
     total_medicines = len(medicines)
-    low_stock = sum(
-        1 for m in medicines
-        if int(m.get('quantity', 0)) <= int(m.get('threshold', 0))
-    )
-    out_of_stock = sum(
-        1 for m in medicines
-        if int(m.get('quantity', 0)) == 0
-    )
+    low_stock = sum(1 for m in medicines if int(m.get('quantity', 0)) <= int(m.get('threshold', 0)))
+    out_of_stock = sum(1 for m in medicines if int(m.get('quantity', 0)) == 0)
 
     return render_template(
         'reports.html',
@@ -810,18 +614,31 @@ def reports():
         low_stock=low_stock,
         out_of_stock=out_of_stock
     )
-print(app.url_map)
-@app.route("/reports")
-def reports():
-    pass
 
+
+# ---------------------------------------
 # User Profile Page
+# ---------------------------------------
 @app.route('/profile', methods=['GET', 'POST'])
 @login_required
 def profile():
     try:
-        # Get user details from DynamoDB
         response = users_table.get_item(Key={'user_id': session['user_id']})
         user = response.get('Item', {})
-        
+
         if request.method == 'POST':
+            flash('Profile update coming soon.', 'info')
+
+        return render_template('profile.html', user=user)
+
+    except Exception as e:
+        logger.error(f"Profile error: {e}")
+        flash('Unable to load profile.', 'danger')
+        return redirect(url_for('dashboard'))
+
+
+# ---------------------------------------
+# App Runner
+# ---------------------------------------
+if __name__ == "__main__":
+    app.run(debug=True)
