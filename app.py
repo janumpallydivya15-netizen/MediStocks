@@ -435,7 +435,7 @@ def logout():
 
 # ---------------------------------------
 # Dashboard Page
-# ---------------------------------------@app.route("/dashboard")
+@app.route("/dashboard")
 @login_required
 def dashboard():
     stats = {
@@ -450,29 +450,29 @@ def dashboard():
             FilterExpression=Attr("user_id").eq(session["user_id"])
         )
         medicines = response.get("Items", [])
+
+        today = datetime.now().date()
+
+        for med in medicines:
+            stats["total_medicines"] += 1
+
+            quantity = int(med.get("quantity", 0))
+            threshold = int(med.get("threshold", 0))
+
+            if quantity <= threshold:
+                stats["low_stock"] += 1
+
+            expiry = med.get("expiration_date")
+            if expiry:
+                try:
+                    expiry_date = datetime.strptime(expiry, "%Y-%m-%d").date()
+                    if expiry_date < today:
+                        stats["expired"] += 1
+                except ValueError:
+                    pass
+
     except Exception as e:
         logger.error(f"Dashboard error: {e}")
-        medicines = []
-
-    today = datetime.now().date()
-
-    for med in medicines:
-        stats["total_medicines"] += 1
-
-        quantity = int(med.get("quantity", 0))
-        threshold = int(med.get("threshold", 0))
-
-        if quantity <= threshold:
-            stats["low_stock"] += 1
-
-        expiry = med.get("expiration_date")
-        if expiry:
-            try:
-                expiry_date = datetime.strptime(expiry, "%Y-%m-%d").date()
-                if expiry_date < today:
-                    stats["expired"] += 1
-            except ValueError:
-                pass
 
     return render_template("dashboard.html", stats=stats)
 
