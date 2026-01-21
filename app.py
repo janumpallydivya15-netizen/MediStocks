@@ -497,46 +497,53 @@ def medicines():
 # ---------------------------------------
 # Add Medicine
 # ---------------------------------------
-@app.route("/dashboard")
+@app.route('/medicines/add', methods=['GET', 'POST'])
 @login_required
-def dashboard():
-    stats = {
-        "total_medicines": 0,
-        "total_value": 0,
-        "low_stock": 0,
-        "expired": 0
-    }
+def add_medicine():
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        category = request.form.get('category', '').strip()
+        quantity = request.form.get('quantity', '0')
+        threshold = request.form.get('threshold', '0')
+        expiration_date = request.form.get('expiration_date', '')
 
-    try:
-        response = medicines_table.scan(
-            FilterExpression=Attr("user_id").eq(session["user_id"])
-        )
-        medicines = response.get("Items", [])
-    except Exception as e:
-        logger.error(f"Dashboard error: {e}")
-        medicines = []
+        if not all([name, category, quantity, threshold, expiration_date]):
+            flash('All fields are required', 'danger')
+            return render_template('add_medicine.html')
 
-    today = datetime.now().date()
+        try:
+            quantity = int(quantity)
+            threshold = int(threshold)
 
-    for med in medicines:
-        stats["total_medicines"] += 1
+            medicine_id = str(uuid.uuid4())
 
-        quantity = int(med.get("quantity", 0))
-        threshold = int(med.get("threshold", 0))
+            medicines_table.put_item(
+                Item={
+                    "medicine_id": medicine_id,
+                    "user_id": session["user_id"],   # ✅ CRITICAL
+                    "name": name,
+                    "category": category,
+                    "quantity": quantity,
+                    "threshold": threshold,
+                    "expiration_date": expiration_date,
+                    "created_at": datetime.now().isoformat()
+                }
+            )
 
-        if quantity <= threshold:
-            stats["low_stock"] += 1
+            # Low stock alert
+            if quantity <= threshold:
+                send_low_stock_alert(name, quantity, threshold, session.get('email'))
 
-        expiry = med.get("expiration_date")
-        if expiry:
-            try:
-                expiry_date = datetime.strptime(expiry, "%Y-%m-%d").date()
-                if expiry_date < today:
-                    stats["expired"] += 1
-            except ValueError:
-                pass
+            flash("Medicine added successfully!", "success")
+            return redirect(url_for('medicines'))
 
-    return render_template("dashboard.html", stats=stats)
+        except ValueError:
+            flash('Quantity and threshold must be numbers', 'danger')
+        except Exception as e:
+            logger.error(f"Add medicine error: {e}")
+            flash('Error adding medicine', 'danger')
+
+    return render_template('add_medicine.html')
 
 # ---------------------------------------
 # Alerts Page
