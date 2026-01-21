@@ -201,6 +201,7 @@ def add_medicine():
         medicines_table.put_item(
             Item={
                 'medicine_id': medicine_id,
+                'user_id': session['user_id'],   # ✅ ADD THIS LINE
                 'name': request.form.get('name'),
                 'category': request.form.get('category'),
                 'quantity': int(request.form.get('quantity')),
@@ -214,7 +215,6 @@ def add_medicine():
         return redirect(url_for('medicines'))
 
     return render_template('add_medicine.html')
-
 # ================= ALERTS =================
 # Route: Edit Medicine
 from decimal import Decimal
