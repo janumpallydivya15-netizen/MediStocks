@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-
 {% block content %}
+
 <h2>Medicines List</h2>
 
-<table border="1">
+<table border="1" cellpadding="10">
     <tr>
         <th>Name</th>
         <th>Quantity</th>
@@ -15,29 +15,24 @@
         <td>{{ med.name }}</td>
         <td>{{ med.quantity }}</td>
         <td>
+            <!-- Edit button -->
+            <a href="{{ url_for('edit_medicine_page', medicine_id=med.medicine_id) }}">
+                <button>Edit</button>
+            </a>
 
-            <!-- EDIT FORM -->
-            <form method="POST"
-                  action="{{ url_for('edit_medicine', medicine_id=med.medicine_id) }}"
-                  style="display:inline;">
-                <input type="text" name="medicine_name" value="{{ med.name }}" required>
-                <input type="number" name="quantity" value="{{ med.quantity }}" required>
-                <button type="submit">Update</button>
-            </form>
-
-            <!-- DELETE FORM (ADD THIS) -->
+            <!-- Delete button -->
             <form method="POST"
                   action="{{ url_for('delete_medicine', medicine_id=med.medicine_id) }}"
                   style="display:inline;">
                 <button type="submit"
-                        onclick="return confirm('Are you sure you want to delete this medicine?')">
+                        onclick="return confirm('Are you sure?')">
                     Delete
                 </button>
             </form>
-
         </td>
     </tr>
     {% endfor %}
 </table>
 
 {% endblock %}
+
