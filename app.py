@@ -76,12 +76,8 @@ def send_low_stock_email(to_email, medicine_name, quantity):
     msg["Subject"] = "⚠️ Low Stock Alert"
 
     body = f"""
-    Alert!
-
     Medicine: {medicine_name}
-    Remaining Quantity: {quantity}
-
-    Please restock immediately.
+    Quantity left: {quantity}
     """
 
     msg.attach(MIMEText(body, "plain"))
@@ -90,7 +86,6 @@ def send_low_stock_email(to_email, medicine_name, quantity):
         server.starttls()
         server.login(SENDER_EMAIL, EMAIL_PASSWORD)
         server.send_message(msg)
-
 # =================================================
 # AUTH ROUTES
 # =================================================
@@ -251,11 +246,8 @@ def edit_medicine(medicine_id):
         )
 
         if qty <= threshold:
-            send_low_stock_email(
-                request.form["name"],
-                qty,
-                threshold,
-                session["email"]
+            send_low_stock_email(user_email, med_name, quantity)
+
             )
 
         flash("Medicine updated successfully", "success")
