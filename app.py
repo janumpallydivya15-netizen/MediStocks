@@ -33,7 +33,7 @@ USERS_TABLE = os.getenv("DYNAMODB_TABLE_USERS", "MediStock_Users")
 SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
 SENDER_EMAIL = os.getenv("janumpallydivya15@gmail.com")
-SENDER_PASSWORD = os.getenv("SENDER_PASSWORD")
+SENDER_PASSWORD = os.getenv("byfo cuwt jgif zof")
 
 dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
 medicines_table = dynamodb.Table(MEDICINES_TABLE)
