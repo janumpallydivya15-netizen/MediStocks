@@ -4,6 +4,7 @@ import boto3
 from boto3.dynamodb.conditions import Attr
 from datetime import datetime, timedelta
 from functools import wraps
+import logging
 import uuid
 import os
 
