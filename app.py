@@ -143,13 +143,35 @@ def dashboard():
     response = medicines_table.scan()
     medicines = response.get("Items", [])
 
+    total_medicines = len(medicines)
+    total_value = 0
+    low_stock_count = 0
+    expired_count = 0
+
+    today = datetime.today().date()
+
     for med in medicines:
-        if int(med.get("quantity", 0)) < 10:
-            print("Low stock alert:", med.get("medicine_name"))
+        qty = int(med.get("quantity", 0))
+        price = float(med.get("price", 0))
+        total_value += qty * price
+
+        # Low stock
+        if qty < 10:
+            low_stock_count += 1
+
+        # Expired
+        expiry_str = med.get("expiry_date")
+        if expiry_str:
+            expiry_date = datetime.strptime(expiry_str, "%Y-%m-%d").date()
+            if expiry_date < today:
+                expired_count += 1
 
     return render_template(
         "dashboard.html",
-        medicines=medicines
+        total_medicines=total_medicines,
+        total_value=total_value,
+        low_stock_count=low_stock_count,
+        expired_count=expired_count
     )
 
 # =================================================
