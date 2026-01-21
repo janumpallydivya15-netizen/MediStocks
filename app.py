@@ -205,22 +205,18 @@ def add_medicine():
         medicine_id = str(uuid.uuid4())
 
         medicines_table.put_item(
-            Item={
-                'medicine_id': medicine_id,
-                'user_id': session['user_id'],   # ✅ ADD THIS LINE
-                'name': request.form.get('name'),
-                'category': request.form.get('category'),
-                'quantity': int(request.form.get('quantity')),
-                'threshold': int(request.form.get('threshold')),
-                'expiration_date': request.form.get('expiration_date'),
-                'created_at': datetime.now().isoformat()
-            }
-        )
-
-        flash('Medicine added successfully', 'success')
-        return redirect(url_for('medicines'))
-
-    return render_template('add_medicine.html')
+    Item={
+        'medicine_id': medicine_id,
+        'user_id': session['user_id'],   # VERY IMPORTANT
+        'name': request.form.get('name'),
+        'category': request.form.get('category'),
+        'quantity': int(request.form.get('quantity')),
+        'threshold': int(request.form.get('threshold')),
+        'unit_price': float(request.form.get('unit_price')),  # ✅ ADD THIS
+        'expiration_date': request.form.get('expiration_date'),
+        'created_at': datetime.now().isoformat()
+    }
+)
 # ================= ALERTS =================
 # Route: Edit Medicine
 from decimal import Decimal
