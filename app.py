@@ -394,6 +394,33 @@ Time: {datetime.now()}
     except Exception as e:
         print("SNS publish FAILED:", str(e))
 
+
+@app.route('/reports')
+@login_required
+def reports():
+    response = medicines_table.scan(
+        FilterExpression=Attr('user_id').eq(session['user_id'])
+    )
+    medicines = response.get('Items', [])
+
+    total_medicines = len(medicines)
+    low_stock = sum(
+        1 for m in medicines
+        if int(m.get('quantity', 0)) <= int(m.get('threshold', 0))
+    )
+    out_of_stock = sum(
+        1 for m in medicines
+        if int(m.get('quantity', 0)) == 0
+    )
+
+    return render_template(
+        'reports.html',
+        medicines=medicines,
+        total_medicines=total_medicines,
+        low_stock=low_stock,
+        out_of_stock=out_of_stock
+    )
+
 # Error handlers
 @app.errorhandler(404)
 def not_found(e):
