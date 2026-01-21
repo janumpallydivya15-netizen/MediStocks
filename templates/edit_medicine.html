@@ -3,11 +3,12 @@
 {% block content %}
 <h2>Edit Medicine</h2>
 
-<form method="POST">
-    <div class="mb-3">
-        <label>Name</label>
-        <input class="form-control" name="name" value="{{ medicine.name }}" required>
-    </div>
+<form method="POST" action="{{ url_for('edit_medicine', med_id=medicine.medicine_id) }}">
+    <input type="text" name="medicine_name" value="{{ medicine.medicine_name }}" required>
+    <input type="number" name="quantity" value="{{ medicine.quantity }}" required>
+    <button type="submit">Update</button>
+</form>
+
 
     <div class="mb-3">
         <label>Category</label>
@@ -32,4 +33,5 @@
     <button class="btn btn-primary">Update Medicine</button>
 </form>
 {% endblock %}
+
 
