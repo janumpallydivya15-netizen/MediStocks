@@ -248,7 +248,7 @@ def edit_medicine(medicine_id):
         if qty <= threshold:
             send_low_stock_email(user_email, med_name, quantity)
 
-            )
+            
 
         flash("Medicine updated successfully", "success")
         return redirect(url_for("medicines"))
