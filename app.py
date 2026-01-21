@@ -135,13 +135,6 @@ def logout():
 # =================================================
 @app.route("/dashboard")
 def dashboard():
-    send_low_stock_email({
-    "medicine_name": "Paracetamol",
-    "quantity": 3,
-    "threshold": 10,
-    "expiry_date": "2026-01-10"
-})
-
     response = medicines_table.scan()
     medicines = response.get("Items", [])
 
