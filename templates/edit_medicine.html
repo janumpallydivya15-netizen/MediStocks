@@ -1,19 +1,50 @@
 {% extends "base.html" %}
+
 {% block content %}
+<div class="container mt-4">
+    <h2>Edit Medicine</h2>
 
-<h2>Edit Medicine</h2>
+    <form method="POST">
+        <div class="mb-3">
+            <label class="form-label">Medicine Name</label>
+            <input
+                type="text"
+                class="form-control"
+                name="medicine_name"
+                value="{{ medicine.medicine_name }}"
+                required
+            >
+        </div>
 
-<form method="POST">
-    <label>Medicine Name</label><br>
-    <input type="text" name="medicine_name"
-           value="{{ medicine.name }}" required><br><br>
+        <div class="mb-3">
+            <label class="form-label">Quantity</label>
+            <input
+                type="number"
+                class="form-control"
+                name="quantity"
+                value="{{ medicine.quantity }}"
+                required
+            >
+        </div>
 
-    <label>Quantity</label><br>
-    <input type="number" name="quantity"
-           value="{{ medicine.quantity }}" required><br><br>
+        <div class="mb-3">
+            <label class="form-label">Expiry Date</label>
+            <input
+                type="date"
+                class="form-control"
+                name="expiry_date"
+                value="{{ medicine.expiry_date }}"
+                required
+            >
+        </div>
 
-    <button type="submit">Update Medicine</button>
-    <a href="{{ url_for('medicines') }}">Cancel</a>
-</form>
+        <button type="submit" class="btn btn-primary">
+            Update Medicine
+        </button>
 
+        <a href="{{ url_for('medicines') }}" class="btn btn-secondary">
+            Cancel
+        </a>
+    </form>
+</div>
 {% endblock %}
