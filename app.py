@@ -29,6 +29,13 @@ app.secret_key = os.getenv("SECRET_KEY", "dev_secret")
 AWS_REGION = os.getenv("AWS_REGION", "ap-south-1")
 MEDICINES_TABLE = os.getenv("DYNAMODB_TABLE_MEDICINES", "MediStock_Medicines")
 USERS_TABLE = os.getenv("DYNAMODB_TABLE_USERS", "MediStock_Users")
+# ================= SNS CONFIG (ADD HERE) =================
+SNS_TOPIC_ARN = "arn:aws:sns:ap-south-1:123456789012:MediStockAlerts"
+
+sns_client = boto3.client(
+    "sns",
+    region_name=AWS_REGION
+)
 
 SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
@@ -72,23 +79,24 @@ def login_required(f):
     return wrap
 
 
-def send_low_stock_email(to_email, medicine_name, quantity):
-    msg = MIMEMultipart()
-    msg["From"] = SENDER_EMAIL
-    msg["To"] = to_email
-    msg["Subject"] = "⚠️ Low Stock Alert"
+# ================= EMAIL FUNCTION (ADD HERE) =================
+def send_low_stock_email(med):
+    message = f"""
+🚨 LOW STOCK ALERT 🚨
 
-    body = f"""
-    Medicine: {medicine_name}
-    Quantity left: {quantity}
-    """
+Medicine: {med.get('medicine_name')}
+Quantity Left: {med.get('quantity')}
+Threshold: {med.get('threshold')}
+Expiry Date: {med.get('expiry_date')}
 
-    msg.attach(MIMEText(body, "plain"))
+Please restock immediately.
+"""
 
-    with smtplib.SMTP("smtp.gmail.com", 587) as server:
-        server.starttls()
-        server.login(SENDER_EMAIL, EMAIL_PASSWORD)
-        server.send_message(msg)
+    sns_client.publish(
+        TopicArn=SNS_TOPIC_ARN,
+        Subject="🚨 Low Stock Alert - MediStocks",
+        Message=message
+    )
 # =================================================
 # AUTH ROUTES
 # =================================================
@@ -142,6 +150,13 @@ def logout():
 # =================================================
 @app.route("/dashboard")
 def dashboard():
+    send_low_stock_email({
+    "medicine_name": "Paracetamol",
+    "quantity": 3,
+    "threshold": 10,
+    "expiry_date": "2026-01-10"
+})
+
     response = medicines_table.scan()
     medicines = response.get("Items", [])
 
