@@ -171,7 +171,6 @@ def dashboard():
         if int(m.get('quantity', 0)) == 0
     )
 
-    # ✅ THIS WAS MISSING
     stats = {
         "total_medicines": total_medicines,
         "low_stock": low_stock,
@@ -181,9 +180,9 @@ def dashboard():
     return render_template(
         'dashboard.html',
         medicines=medicines,
-        stats=stats,          # ✅ REQUIRED
-        
+        stats=stats        # ✅ THIS FIXES EVERYTHING
     )
+
 
 
 # ================= MEDICINES =================
