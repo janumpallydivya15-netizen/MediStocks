@@ -14,7 +14,7 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <p class="mb-1 opacity-75">Total Medicines</p>
-                        <h2 class="fw-bold mb-0">{{ stats.total_medicines }}</h2>
+                        <h2 class="fw-bold mb-0">{{ {{ stats.total_medicines | default(0) }}</h2>
                     </div>
                     <i class="bi bi-box-seam" style="font-size: 3rem; opacity: 0.3;"></i>
                 </div>
@@ -39,7 +39,7 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <p class="mb-1 opacity-75">Low Stock Items</p>
-                        <h2 class="fw-bold mb-0">{{ stats.low_stock }}</h2>
+                        <h2 class="fw-bold mb-0">{{ stats.low_stock | default(0) }}</h2>
                     </div>
                     <i class="bi bi-exclamation-triangle" style="font-size: 3rem; opacity: 0.3;"></i>
                 </div>
@@ -51,7 +51,7 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <p class="mb-1 opacity-75">Expired Items</p>
-                        <h2 class="fw-bold mb-0">{{ stats.expired }}</h2>
+                        <h2 class="fw-bold mb-0">{{ {{ stats.expired | default(0) }}</h2>
                     </div>
                     <i class="bi bi-calendar-x" style="font-size: 3rem; opacity: 0.3;"></i>
                 </div>
@@ -145,3 +145,4 @@
 </div>
 
 {% endblock %}
+
