@@ -180,8 +180,7 @@ def dashboard():
 
 total_value = sum(
     int(item.get('quantity', 0)) * float(item.get('price', 0))
-    for item in items
-)
+    for item in items)
 
         if qty < 10:
             low_stock += 1
