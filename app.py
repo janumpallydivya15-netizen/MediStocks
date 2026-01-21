@@ -233,7 +233,6 @@ def edit_medicine(med_id):
 
     flash("Medicine updated successfully", "success")
     return redirect(url_for("dashboard"))
-===================================
 # ALERTS PAGE
 # =================================================
 @app.route("/alerts")
