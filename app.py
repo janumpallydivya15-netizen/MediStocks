@@ -437,35 +437,24 @@ def logout():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    # -------------------------------
-    # Initialize safe default values
-    # -------------------------------
     total_count = 0
     low_stock_count = 0
     expired_count = 0
 
-    # -------------------------------
-    # Fetch medicines from DynamoDB
-    # -------------------------------
     try:
         response = medicines_table.scan()
         medicines = response.get("Items", [])
-    except Exception as e:
+    except Exception:
         medicines = []
 
-    # -------------------------------
-    # Process medicine data
-    # -------------------------------
     today = datetime.now().date()
 
     for med in medicines:
         total_count += 1
 
-        # Low stock check
         if int(med.get("quantity", 0)) <= int(med.get("reorder_level", 5)):
             low_stock_count += 1
 
-        # Expiry check
         expiry_str = med.get("expiry_date")
         if expiry_str:
             try:
@@ -475,22 +464,14 @@ def dashboard():
             except ValueError:
                 pass
 
-    # -------------------------------
-    # Stats object (IMPORTANT)
-    # -------------------------------
     stats = {
         "total_medicines": total_count,
         "low_stock": low_stock_count,
         "expired": expired_count
     }
 
-    # -------------------------------
-    # Render dashboard
-    # -------------------------------
-    return render_template(
-        "dashboard.html",
-        stats=stats
-    )
+    return render_template("dashboard.html", stats=stats)
+
 
 # Medicines List Page
 @app.route('/medicines')
@@ -825,10 +806,6 @@ def reports():
         out_of_stock=out_of_stock
     )
 print(app.url_map)
-@app.route("/reports")
-@login_required
-def reports():
-    return render_template("reports.html")
 
 # User Profile Page
 @app.route('/profile', methods=['GET', 'POST'])
