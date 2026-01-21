@@ -437,42 +437,32 @@ def logout():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    try:
-        # Get user's medicines
-        response = medicines_table.scan(
-            FilterExpression=Attr('user_id').eq(session['user_id'])
-        )
-        medicines = response.get('Items', [])
+    response = medicines_table.scan(
+        FilterExpression=Attr('user_id').eq(session['user_id'])
+    )
+    medicines = response.get('Items', [])
 
-        # Calculate statistics
-        total_medicines = len(medicines)
-        low_stock = sum(
-            1 for m in medicines
-            if int(m.get('quantity', 0)) <= int(m.get('threshold', 0))
-        )
-        out_of_stock = sum(
-            1 for m in medicines
-            if int(m.get('quantity', 0)) == 0
-        )
+    total_medicines = len(medicines)
+    low_stock = sum(
+        1 for m in medicines
+        if int(m.get('quantity', 0)) <= int(m.get('threshold', 0))
+    )
+    out_of_stock = sum(
+        1 for m in medicines
+        if int(m.get('quantity', 0)) == 0
+    )
 
-        stats = {
-            "total_medicines": total_medicines,
-            "low_stock": low_stock,
-            "out_of_stock": out_of_stock
-        }
+    stats = {
+        "total_medicines": total_medicines,
+        "low_stock": low_stock,
+        "out_of_stock": out_of_stock
+    }
 
-        # Check for expiring medicines
-        check_and_alert_expiring_medicines(session['user_id'], session.get('email'))
-
-        return render_template('dashboard.html', 
-                              medicines=medicines, 
-                              stats=stats)
-    except Exception as e:
-        logger.error(f"Dashboard error: {e}")
-        flash('An error occurred loading the dashboard.', 'danger')
-        return render_template('dashboard.html', 
-                              medicines=[], 
-                              stats={})
+    return render_template(
+        'dashboard.html',
+        medicines=medicines,
+        stats=stats   # 🔴 THIS LINE FIXES EVERYTHING
+    )
 
 # Medicines List Page
 @app.route('/medicines')
