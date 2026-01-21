@@ -774,39 +774,28 @@ def update_stock(medicine_id):
 @app.route('/reports')
 @login_required
 def reports():
-    try:
-        response = medicines_table.scan(
-            FilterExpression=Attr('user_id').eq(session['user_id'])
-        )
-        medicines = response.get('Items', [])
+    response = medicines_table.scan(
+        FilterExpression=Attr('user_id').eq(session['user_id'])
+    )
+    medicines = response.get('Items', [])
 
-        total_medicines = len(medicines)
-        low_stock = sum(
-            1 for m in medicines
-            if int(m.get('quantity', 0)) <= int(m.get('threshold', 0))
-        )
-        out_of_stock = sum(
-            1 for m in medicines
-            if int(m.get('quantity', 0)) == 0
-        )
-        
-        # Calculate total stock value (if you add price field later)
-        total_stock = sum(int(m.get('quantity', 0)) for m in medicines)
+    total_medicines = len(medicines)
+    low_stock = sum(
+        1 for m in medicines
+        if int(m.get('quantity', 0)) <= int(m.get('threshold', 0))
+    )
+    out_of_stock = sum(
+        1 for m in medicines
+        if int(m.get('quantity', 0)) == 0
+    )
 
-        return render_template(
-            'reports.html',
-            medicines=medicines,
-            total_medicines=total_medicines,
-            low_stock=low_stock,
-            out_of_stock=out_of_stock,
-            total_stock=total_stock
-        )
-    except Exception as e:
-        logger.error(f"Reports error: {e}")
-        flash('Error loading reports', 'danger')
-        return render_template('reports.html', medicines=[], 
-                             total_medicines=0, low_stock=0, 
-                             out_of_stock=0, total_stock=0)
+    return render_template(
+        'reports.html',
+        medicines=medicines,
+        total_medicines=total_medicines,
+        low_stock=low_stock,
+        out_of_stock=out_of_stock
+    )
 
 # User Profile Page
 @app.route('/profile', methods=['GET', 'POST'])
