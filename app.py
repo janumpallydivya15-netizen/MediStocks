@@ -214,32 +214,27 @@ def medicines():
     return render_template("medicines.html", medicines=res.get("Items", []))
 
 
-@app.route('/add_medicine', methods=['POST'])
+@app.route('/add_medicine', methods=['GET', 'POST'])
 @login_required
 def add_medicine():
 
-    medicine_name = request.form['medicine_name']
-    quantity = int(request.form['quantity'])     # ✅ DEFINE FIRST
-    threshold = int(request.form['threshold'])   # ✅ DEFINE FIRST
-    email = session['email']
+    if request.method == 'POST':
+        medicine_name = request.form['medicine_name']
+        quantity = int(request.form['quantity'])
+        threshold = int(request.form['threshold'])
+        email = session['email']
 
-    # DynamoDB put_item / update_item here
+        # DynamoDB update here
 
-    if quantity <= threshold:
-        message = f"{medicine_name} stock is low ({quantity})"
-        send_low_stock_email(email, message)
+        if quantity <= threshold:
+            message = f"{medicine_name} stock is low ({quantity})"
+            send_low_stock_email(email, message)
 
-    flash("Medicine added successfully")
-    return redirect(url_for('dashboard'))
+        flash("Medicine added successfully")
+        return redirect(url_for('dashboard'))
 
-    return render_template("add_medicine.html")
-def get_medicine_by_id(med_id):
-    response = medicines_table.get_item(
-        Key={
-            'medicine_id': med_id
-        }
-    )
-    return response.get('Item')
+    return render_template('add_medicine.html')
+
 LOW_STOCK_LIMIT = 50
 
 @app.route("/edit_medicine/<medicine_id>", methods=["GET", "POST"])
