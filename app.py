@@ -222,36 +222,51 @@ def get_medicine_by_id(med_id):
     return response.get('Item')
 
 
-@app.route('/edit_medicine/<med_id>', methods=['GET', 'POST'])
-@login_required
-def edit_medicine(med_id):
-    medicine = get_medicine_by_id(med_id)
-
-    if not medicine:
-        flash("Medicine not found", "danger")
-        return redirect(url_for('dashboard'))
-
+@app.route('/edit_medicine/<medicine_id>', methods=['GET', 'POST'])
+def edit_medicine(medicine_id):
     if request.method == 'POST':
-       name = request.form.get('name')
-stock = request.form.get('stock')
-threshold = request.form.get('threshold')
-
-if not name or not stock or not threshold:
-    flash("All fields are required", "danger")
-    return redirect(request.url)
+        name = request.form['name']
+        manufacturer = request.form['manufacturer']
+        quantity = int(request.form['quantity'])
+        price = request.form['price']
+        expiry_date = request.form['expiry_date']
 
         medicines_table.update_item(
-            Key={'medicine_id': med_id},
-            UpdateExpression="SET #n=:n, stock=:s, threshold=:t",
-            ExpressionAttributeNames={'#n': 'name'},
+            Key={
+                'medicine_id': medicine_id
+            },
+            UpdateExpression="""
+                SET 
+                    #n = :n,
+                    manufacturer = :m,
+                    quantity = :q,
+                    price = :p,
+                    expiry_date = :e
+            """,
+            ExpressionAttributeNames={
+                '#n': 'name'
+            },
             ExpressionAttributeValues={
                 ':n': name,
-                ':s': stock,
-                ':t': threshold
+                ':m': manufacturer,
+                ':q': quantity,
+                ':p': price,
+                ':e': expiry_date
             }
         )
 
         flash("Medicine updated successfully", "success")
+        return redirect(url_for('dashboard'))
+
+    # GET request → load existing data
+    response = medicines_table.get_item(
+        Key={'medicine_id': medicine_id}
+    )
+
+    medicine = response.get('Item')
+
+    if not medicine:
+        flash("Medicine not found", "danger")
         return redirect(url_for('dashboard'))
 
     return render_template('edit_medicine.html', medicine=medicine)
