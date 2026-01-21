@@ -219,44 +219,23 @@ def medicines():
 import uuid
 from decimal import Decimal
 
-@app.route('/add_medicine', methods=['GET', 'POST'])
+@app.route('/add_medicine', methods=['POST'])
 @login_required
 def add_medicine():
 
-    if request.method == 'POST':
-        print("✅ add_medicine POST")
+    medicine_name = request.form.get('medicine_name')
+    qty = int(request.form.get('quantity', 0))
+    threshold = int(request.form.get('threshold', 10))
+    email = session['email']
 
-        medicine_id = str(uuid.uuid4())
-        medicine_name = request.form.get('medicine_name')
-        quantity = int(request.form.get('quantity', 0))
-        threshold = int(request.form.get('threshold', 0))
-        price = float(request.form.get('price', 0))
-        email = session['email']
+    # DynamoDB save/update here
 
-        print("DATA:", medicine_name, quantity, threshold, price)
+    if qty < threshold:
+        message = f"{medicine_name} stock is low ({qty})"
+        send_low_stock_email(email, message)
 
-        medicines_table.put_item(
-            Item={
-                'medicine_id': medicine_id,   # MUST match partition key
-                'medicine_name': medicine_name,
-                'quantity': quantity,
-                'threshold': threshold,
-                'price': Decimal(str(price)),
-                'created_by': email
-            }
-        )
-
-        print("✅ DynamoDB put_item DONE")
-
-        if quantity <= threshold:
-            message = f"{medicine_name} stock is low ({quantity})"
-            send_low_stock_email(email, message)
-
-        flash("Medicine added successfully")
-        return redirect(url_for('dashboard'))
-
-    return render_template('add_medicine.html')
-
+    flash("Medicine added successfully")
+    return redirect(url_for('dashboard'))
 
 from decimal import Decimal
 
