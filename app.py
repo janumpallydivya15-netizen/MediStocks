@@ -4,6 +4,8 @@ import boto3
 from boto3.dynamodb.conditions import Attr
 from datetime import datetime, timedelta
 from functools import wraps
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 import logging
 import uuid
 import os
@@ -67,29 +69,27 @@ def login_required(f):
     return wrap
 
 
-def send_low_stock_email(name, qty, threshold, to_email):
-    if not SENDER_EMAIL or not SENDER_PASSWORD:
-        return
-
+def send_low_stock_email(to_email, medicine_name, quantity):
     msg = MIMEMultipart()
     msg["From"] = SENDER_EMAIL
     msg["To"] = to_email
-    msg["Subject"] = f"LOW STOCK ALERT: {name}"
+    msg["Subject"] = "⚠️ Low Stock Alert"
 
     body = f"""
-Medicine: {name}
-Current Stock: {qty}
-Threshold: {threshold}
+    Alert!
 
-Please restock immediately.
-"""
+    Medicine: {medicine_name}
+    Remaining Quantity: {quantity}
+
+    Please restock immediately.
+    """
+
     msg.attach(MIMEText(body, "plain"))
 
-    server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-    server.starttls()
-    server.login(SENDER_EMAIL, SENDER_PASSWORD)
-    server.send_message(msg)
-    server.quit()
+    with smtplib.SMTP("smtp.gmail.com", 587) as server:
+        server.starttls()
+        server.login(SENDER_EMAIL, EMAIL_PASSWORD)
+        server.send_message(msg)
 
 # =================================================
 # AUTH ROUTES
