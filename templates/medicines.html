@@ -21,7 +21,7 @@
         </div>
 
         <div class="actions">
-            <a href="{{ url_for('edit_medicine_page', medicine_id=med.medicine_id) }}">
+            <a href="{{ url_for('edit_medicine', medicine_id=med.medicine_id) }}">
                 <button class="edit-btn">✏️ Edit</button>
             </a>
 
@@ -40,3 +40,4 @@
 </div>
 
 {% endblock %}
+
