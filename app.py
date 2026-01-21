@@ -1,16 +1,16 @@
-from flask import Flask, request, session, redirect, url_for, render_template, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+from werkzeug.security import generate_password_hash, check_password_hash
 import boto3
 from boto3.dynamodb.conditions import Attr
-from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-import logging
-import os
-import uuid
-from dotenv import load_dotenv
+from datetime import datetime, timedelta
 from functools import wraps
+import uuid
+import os
+
+from dotenv import load_dotenv   # ✅ ADD THIS
+
+load_dotenv()                    # ✅ NOW THIS WORKS
+
 
 # =================================================
 # ENV + APP SETUP
