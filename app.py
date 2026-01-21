@@ -22,6 +22,29 @@ app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "dev_secret")
 
 AWS_REGION = "ap-south-1"
+SNS_TOPIC_ARN = os.environ.get("SNS_TOPIC_ARN")
+
+sns_client = boto3.client("sns", region_name=AWS_REGION)
+
+def send_low_stock_email(medicine_name, quantity):
+    if not SNS_TOPIC_ARN:
+        print("❌ SNS_TOPIC_ARN is not set")
+        return
+
+    message = (
+        f"⚠️ LOW STOCK ALERT ⚠️\n\n"
+        f"Medicine: {medicine_name}\n"
+        f"Remaining Quantity: {quantity}\n\n"
+        f"Please restock immediately."
+    )
+
+    response = sns_client.publish(
+        TopicArn=SNS_TOPIC_ARN,
+        Message=message,
+        Subject="Low Medicine Stock Alert"
+    )
+
+    print("✅ SNS message sent:", response["MessageId"])
 
 MEDICINES_TABLE = os.getenv("DYNAMODB_TABLE_MEDICINES", "MediStock_Medicines")
 USERS_TABLE = os.getenv("DYNAMODB_TABLE_USERS", "MediStock_Users")
