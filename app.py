@@ -432,17 +432,31 @@ def debug_user():
 @app.route('/fix-old-medicines')
 @login_required
 def fix_old_medicines():
-    response = medicines_table.scan()
+    response = medicines_table.scan(
+        FilterExpression=Attr('user_id').eq(session['user_id'])
+    )
+
     for m in response.get('Items', []):
+        update_expr = []
+        values = {}
+
+        if 'unit_price' not in m:
+            update_expr.append('unit_price = :p')
+            values[':p'] = 0.0
+
         if 'updated_at' not in m:
+            update_expr.append('updated_at = :u')
+            values[':u'] = m.get('created_at', datetime.now().isoformat())
+
+        if update_expr:
             medicines_table.update_item(
                 Key={'medicine_id': m['medicine_id']},
-                UpdateExpression='SET updated_at = :u',
-                ExpressionAttributeValues={
-                    ':u': datetime.now().isoformat()
-                }
+                UpdateExpression='SET ' + ', '.join(update_expr),
+                ExpressionAttributeValues=values
             )
-    return "Old medicines fixed"
+
+    return "Old medicines fixed successfully"
+
 
 # Error handlers
 @app.errorhandler(404)
