@@ -241,6 +241,11 @@ def add_medicine():
                 threshold,
                 session["email"]
             )
+                # LOW STOCK CHECK
+    if quantity <= threshold:
+        message = f"{medicine_name} stock is low ({quantity})"
+        send_low_stock_email(email, message)
+
 
         flash("Medicine added successfully", "success")
         return redirect(url_for("medicines"))
