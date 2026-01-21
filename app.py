@@ -156,39 +156,39 @@ def logout():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    user_id = session['user_id']
-
     response = medicines_table.scan(
-        FilterExpression=Attr('user_id').eq(user_id)
+        FilterExpression=Attr('user_id').eq(session['user_id'])
     )
-
     medicines = response.get('Items', [])
 
     total_medicines = len(medicines)
-    low_stock = sum(
-        1 for m in medicines
-        if int(m.get('quantity', 0)) <= int(m.get('threshold', 0))
-    )
-    out_of_stock = sum(
-        1 for m in medicines
-        if int(m.get('quantity', 0)) == 0
-    )
+    low_stock = 0
+    out_of_stock = 0
+    total_value = 0.0
+
+    for m in medicines:
+        qty = int(m.get('quantity', 0))
+        threshold = int(m.get('threshold', 0))
+        price = float(m.get('unit_price', 0))  # SAFE
+
+        total_value += qty * price
+
+        if qty == 0:
+            out_of_stock += 1
+        elif qty <= threshold:
+            low_stock += 1
 
     stats = {
         "total_medicines": total_medicines,
         "low_stock": low_stock,
-        "out_of_stock": out_of_stock
+        "out_of_stock": out_of_stock,
+        "total_value": round(total_value, 2)
     }
 
-    print("DEBUG DASHBOARD:", stats)  # 👈 ADD THIS
-
     return render_template(
-        "dashboard.html",
-        stats=stats,
-        medicines=medicines
+        'dashboard.html',
+        stats=stats
     )
-
-
 
 
 # ================= MEDICINES =================
