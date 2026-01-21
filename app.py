@@ -228,56 +228,49 @@ def get_medicine_by_id(med_id):
     )
     return response.get('Item')
 
-@app.route("/edit-medicine/<medicine_id>", methods=["GET", "POST"])
-@login_required
+@app.route("/edit_medicine/<medicine_id>", methods=["GET", "POST"])
 def edit_medicine(medicine_id):
+    if request.method == "POST":
+        medicines_table.update_item(
+            Key={"medicine_id": medicine_id},
+            UpdateExpression="""
+                SET medicine_name=:name,
+                    category=:cat,
+                    quantity=:qty,
+                    threshold=:th,
+                    price=:price,
+                    expiry_date=:exp
+            """,
+            ExpressionAttributeValues={
+                ":name": request.form["medicine_name"],
+                ":cat": request.form["category"],
+                ":qty": int(request.form["quantity"]),
+                ":th": int(request.form["threshold"]),
+                ":price": float(request.form["price"]),
+                ":exp": request.form["expiry_date"],
+            }
+        )
+        return redirect(url_for("medicines"))
 
     response = medicines_table.get_item(
         Key={"medicine_id": medicine_id}
     )
-
-    if "Item" not in response:
-        flash("Medicine not found", "danger")
-        return redirect(url_for("medicines"))
-
-    medicine = response["Item"]
-
-    if request.method == "POST":
-        name = request.form.get("name")
-        manufacturer = request.form.get("manufacturer")
-        quantity = request.form.get("quantity")
-        price = request.form.get("price")
-        expiry_date = request.form.get("expiry_date")
-
-        if not all([name, manufacturer, quantity, price, expiry_date]):
-            flash("All fields are required", "danger")
-            return render_template("edit_medicine.html", medicine=medicine)
-
-        medicines_table.update_item(
-            Key={"medicine_id": medicine_id},
-            UpdateExpression="""
-                SET #n = :n,
-                    manufacturer = :m,
-                    quantity = :q,
-                    price = :p,
-                    expiry_date = :e
-            """,
-            ExpressionAttributeNames={
-                "#n": "name"
-            },
-            ExpressionAttributeValues={
-                ":n": name,
-                ":m": manufacturer,
-                ":q": int(quantity),                 # ✅ int is OK
-                ":p": Decimal(str(price)),           # ✅ Decimal FIX
-                ":e": expiry_date
+    medicine = response.get("Item")
+    return render_template("edit_medicine.html", medicine=medicine)
+@app.route("/delete_medicine/<medicine_id>", methods=["GET"])
+def delete_medicine(medicine_id):
+    try:
+        medicines_table.delete_item(
+            Key={
+                "medicine_id": medicine_id
             }
         )
+        flash("Medicine deleted successfully.", "success")
+    except Exception as e:
+        print("Delete error:", e)
+        flash("Failed to delete medicine.", "danger")
 
-        flash("Medicine updated successfully", "success")
-        return redirect(url_for("medicines"))
-
-    return render_template("edit_medicine.html", medicine=medicine)
+    return redirect(url_for("medicines"))
 
 # ALERTS PAGE
 # =================================================
