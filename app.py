@@ -9,8 +9,7 @@ from email.mime.multipart import MIMEMultipart
 import logging
 import os
 import uuid
-from dotenv import load_dotenv
-from functools import wraps
+
 
 # =================================================
 # ENV + APP SETUP
