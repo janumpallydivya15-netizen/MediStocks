@@ -246,6 +246,13 @@ def edit_medicine(medicine_id):
 
     flash("Medicine updated successfully", "success")
     return redirect(url_for("dashboard"))
+@app.route("/delete_medicine/<medicine_id>", methods=["POST"])
+def delete_medicine(medicine_id):
+    medicines_table.delete_item(
+        Key={"medicine_id": medicine_id}
+    )
+    flash("Medicine deleted successfully", "success")
+    return redirect(url_for("medicines"))
 
 # ALERTS PAGE
 # =================================================
