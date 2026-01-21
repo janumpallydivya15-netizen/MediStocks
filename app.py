@@ -223,29 +223,29 @@ def get_medicine_by_id(med_id):
     )
     return response.get('Item')
 
-@app.route("/edit_medicine/<medicine_id>", methods=["POST"])
-def edit_medicine(medicine_id):
-    medicine_name = request.form.get("medicine_name")
-    quantity = request.form.get("quantity")
+@app.route("/edit/<medicine_id>", methods=["GET", "POST"])
+def edit_medicine_page(medicine_id):
 
-    if not medicine_name or not quantity:
-        flash("Medicine name and quantity are required", "danger")
-        return redirect(url_for("dashboard"))
+    if request.method == "POST":
+        medicines_table.update_item(
+            Key={"medicine_id": medicine_id},
+            UpdateExpression="SET #n = :name, quantity = :qty",
+            ExpressionAttributeNames={"#n": "name"},
+            ExpressionAttributeValues={
+                ":name": request.form.get("medicine_name"),
+                ":qty": int(request.form.get("quantity"))
+            }
+        )
+        flash("Medicine updated successfully", "success")
+        return redirect(url_for("medicines"))
 
-    medicines_table.update_item(
-        Key={"medicine_id": medicine_id},
-        UpdateExpression="SET #n = :name, quantity = :qty",
-        ExpressionAttributeNames={
-            "#n": "name"
-        },
-        ExpressionAttributeValues={
-            ":name": medicine_name,
-            ":qty": int(quantity)
-        }
+    # GET request → load medicine
+    response = medicines_table.get_item(
+        Key={"medicine_id": medicine_id}
     )
+    medicine = response.get("Item")
 
-    flash("Medicine updated successfully", "success")
-    return redirect(url_for("dashboard"))
+    return render_template("edit_medicine.html", medicine=medicine)
 @app.route("/delete_medicine/<medicine_id>", methods=["POST"])
 def delete_medicine(medicine_id):
     medicines_table.delete_item(
