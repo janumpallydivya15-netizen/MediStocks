@@ -139,33 +139,17 @@ def logout():
 # DASHBOARD
 # =================================================
 @app.route("/dashboard")
-@login_required
 def dashboard():
-   response = medicines_table.scan()
-medicines = response.get("Items", [])
+    response = medicines_table.scan()
+    medicines = response.get("Items", [])
 
-for med in medicines:
-    if int(med.get("quantity", 0)) < 10:
-        print("Low stock alert")
-
-
-    # 2️⃣ Calculate total value (ADD THIS PART)
-    total_value = 0
     for med in medicines:
-        try:
-            price = float(med.get('price', 0))
-            quantity = int(med.get('quantity', 0))
-            total_value += price * quantity
-        except:
-            pass
+        if int(med.get("quantity", 0)) < 10:
+            print("Low stock alert:", med.get("medicine_name"))
 
-    # 3️⃣ Return dashboard (THIS STAYS AT THE END)
     return render_template(
         "dashboard.html",
-        total_medicines=len(medicines),
-        total_value=round(total_value, 2),
-        low_stock=low_stock,
-        expired_count=expired_count
+        medicines=medicines
     )
 
 # =================================================
