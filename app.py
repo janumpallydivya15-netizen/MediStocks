@@ -141,6 +141,18 @@ def logout():
 @app.route("/dashboard")
 @login_required
 def dashboard():
+    response = medicines_table.scan()
+    medicines = response.get("Items", [])
+
+    total_value = 0
+
+    for med in medicines:
+        try:
+            price = float(med.get('price', 0))
+            quantity = int(med.get('quantity', 0))
+            total_value += price * quantity
+        except:
+            pass
     stats = {
         "total_medicines": 0,
         "low_stock": 0,
