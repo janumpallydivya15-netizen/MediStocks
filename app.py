@@ -232,9 +232,13 @@ def edit_medicine(med_id):
         return redirect(url_for('dashboard'))
 
     if request.method == 'POST':
-        name = request.form['name']
-        stock = int(request.form['stock'])
-        threshold = int(request.form['threshold'])
+       name = request.form.get('name')
+stock = request.form.get('stock')
+threshold = request.form.get('threshold')
+
+if not name or not stock or not threshold:
+    flash("All fields are required", "danger")
+    return redirect(request.url)
 
         medicines_table.update_item(
             Key={'medicine_id': med_id},
