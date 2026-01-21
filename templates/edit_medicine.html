@@ -1,37 +1,50 @@
-{% extends "base.html" %}
-
-{% block content %}
 <h2>Edit Medicine</h2>
 
 <form method="POST" action="{{ url_for('edit_medicine', med_id=medicine.medicine_id) }}">
-    <input type="text" name="medicine_name" value="{{ medicine.medicine_name }}" required>
-    <input type="number" name="quantity" value="{{ medicine.quantity }}" required>
-    <button type="submit">Update</button>
-</form>
-
 
     <div class="mb-3">
-        <label>Category</label>
-        <input class="form-control" name="category" value="{{ medicine.category }}" required>
+        <label>Medicine Name</label>
+        <input type="text" class="form-control"
+               name="name"
+               value="{{ medicine.name }}"
+               required>
     </div>
 
     <div class="mb-3">
-        <label>Quantity</label>
-        <input type="number" class="form-control" name="quantity" value="{{ medicine.quantity }}" required>
+        <label>Category</label>
+        <input type="text" class="form-control"
+               name="category"
+               value="{{ medicine.category }}"
+               required>
+    </div>
+
+    <div class="mb-3">
+        <label>Stock</label>
+        <input type="number" class="form-control"
+               name="stock"
+               value="{{ medicine.stock }}"
+               required>
     </div>
 
     <div class="mb-3">
         <label>Threshold</label>
-        <input type="number" class="form-control" name="threshold" value="{{ medicine.threshold }}" required>
+        <input type="number" class="form-control"
+               name="threshold"
+               value="{{ medicine.threshold }}"
+               required>
     </div>
 
     <div class="mb-3">
         <label>Expiration Date</label>
-        <input type="date" class="form-control" name="expiration_date" value="{{ medicine.expiration_date }}" required>
+        <input type="date" class="form-control"
+               name="expiration_date"
+               value="{{ medicine.expiration_date }}"
+               required>
     </div>
 
-    <button class="btn btn-primary">Update Medicine</button>
-</form>
-{% endblock %}
+    <button type="submit" class="btn btn-primary">
+        Update Medicine
+    </button>
 
+</form>
 
