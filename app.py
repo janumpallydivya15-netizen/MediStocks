@@ -215,6 +215,8 @@ def add_medicine():
         'unit_price': float(request.form.get('unit_price')),  # ✅ ADD THIS
         'expiration_date': request.form.get('expiration_date'),
         'created_at': datetime.now().isoformat()
+        'updated_at': datetime.now().isoformat()   # ✅ ADD THIS
+
     }
 )
 # ================= ALERTS =================
