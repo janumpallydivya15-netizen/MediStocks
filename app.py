@@ -144,6 +144,13 @@ def dashboard():
     # 1️⃣ Get medicines
     response = medicines_table.scan()
     medicines = response.get("Items", [])
+    low_stock = 0
+    for med in medicines:
+        try:
+        if int(med.get("quantity", 0)) < 10:
+            low_stock += 1
+    except:
+        pass
 
     # 2️⃣ Calculate total value (ADD THIS PART)
     total_value = 0
@@ -216,38 +223,56 @@ def get_medicine_by_id(med_id):
     )
     return response.get('Item')
 
-
-@app.route("/dashboard")
+@app.route("/edit-medicine/<medicine_id>", methods=["GET", "POST"])
 @login_required
-def dashboard():
-    response = medicines_table.scan()
-    medicines = response.get("Items", [])
+def edit_medicine(medicine_id):
 
-    total_value = 0
-    for med in medicines:
-        try:
-            price = float(med.get('price', 0))
-            quantity = int(med.get('quantity', 0))
-            total_value += price * quantity
-        except:
-            pass
-
-    low_stock = 0    
-    for med in medicines:
-        try:
-        if int(med.get("quantity", 0)) < 10:
-            low_stock += 1
-        except:
-        pass
-
-
-    return render_template(
-        "dashboard.html",
-        total_medicines=len(medicines),
-        total_value=round(total_value, 2),
-        low_stock=low_stock,
-        expired_count=expired_count
+    response = medicines_table.get_item(
+        Key={"medicine_id": medicine_id}
     )
+
+    if "Item" not in response:
+        flash("Medicine not found", "danger")
+        return redirect(url_for("medicines"))
+
+    medicine = response["Item"]
+
+    if request.method == "POST":
+        name = request.form.get("name")
+        manufacturer = request.form.get("manufacturer")
+        quantity = request.form.get("quantity")
+        price = request.form.get("price")
+        expiry_date = request.form.get("expiry_date")
+
+        if not all([name, manufacturer, quantity, price, expiry_date]):
+            flash("All fields are required", "danger")
+            return render_template("edit_medicine.html", medicine=medicine)
+
+        medicines_table.update_item(
+            Key={"medicine_id": medicine_id},
+            UpdateExpression="""
+                SET #n = :n,
+                    manufacturer = :m,
+                    quantity = :q,
+                    price = :p,
+                    expiry_date = :e
+            """,
+            ExpressionAttributeNames={
+                "#n": "name"
+            },
+            ExpressionAttributeValues={
+                ":n": name,
+                ":m": manufacturer,
+                ":q": int(quantity),                 # ✅ int is OK
+                ":p": Decimal(str(price)),           # ✅ Decimal FIX
+                ":e": expiry_date
+            }
+        )
+
+        flash("Medicine updated successfully", "success")
+        return redirect(url_for("medicines"))
+
+    return render_template("edit_medicine.html", medicine=medicine)
 
 # ALERTS PAGE
 # =================================================
