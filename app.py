@@ -419,6 +419,12 @@ def reports():
         low_stock=low_stock,
         out_of_stock=out_of_stock
     )
+@app.route('/debug-user')
+def debug_user():
+    return {
+        "user_id": session.get("user_id"),
+        "username": session.get("username")
+    }
 
 # Error handlers
 @app.errorhandler(404)
