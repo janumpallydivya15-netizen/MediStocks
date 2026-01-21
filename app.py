@@ -394,31 +394,6 @@ Time: {datetime.now()}
     except Exception as e:
         print("SNS publish FAILED:", str(e))
 
-
-# Route: Reports
-@app.route('/reports')
-@login_required
-def reports():
-    try:
-        response = medicines_table.scan()
-        medicines = response['Items']
-        
-        # Category-wise distribution
-        category_stats = {}
-        for med in medicines:
-            cat = med.get('category', 'Uncategorized')
-            if cat not in category_stats:
-                category_stats[cat] = {'count': 0, 'total_value': 0}
-            category_stats[cat]['count'] += 1
-            category_stats[cat]['total_value'] += float(med.get('quantity', 0)) * float(med.get('unit_price', 0))
-        
-        return render_template('reports.html', 
-                             medicines=medicines,
-                             category_stats=category_stats)
-    except Exception as e:
-        flash(f'Error generating reports: {str(e)}', 'danger')
-        return render_template('reports.html', medicines=[], category_stats={})
-
 # Error handlers
 @app.errorhandler(404)
 def not_found(e):
