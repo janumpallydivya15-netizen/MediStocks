@@ -162,21 +162,19 @@ def dashboard():
     medicines = response.get('Items', [])
 
     total_medicines = len(medicines)
-    low_stock = 0
-    out_of_stock = 0
-    total_value = 0.0
+    low_stock = sum(
+        1 for m in medicines
+        if int(m.get('quantity', 0)) <= int(m.get('threshold', 0))
+    )
+    out_of_stock = sum(
+        1 for m in medicines
+        if int(m.get('quantity', 0)) == 0
+    )
 
-    for m in medicines:
-        qty = int(m.get('quantity', 0))
-        threshold = int(m.get('threshold', 0))
-        price = float(m.get('unit_price', 0))  # SAFE
-
-        total_value += qty * price
-
-        if qty == 0:
-            out_of_stock += 1
-        elif qty <= threshold:
-            low_stock += 1
+    total_value = sum(
+        int(m.get('quantity', 0)) * float(m.get('unit_price', 0))
+        for m in medicines
+    )
 
     stats = {
         "total_medicines": total_medicines,
@@ -187,8 +185,10 @@ def dashboard():
 
     return render_template(
         'dashboard.html',
+        medicines=medicines,
         stats=stats
     )
+
 
 
 # ================= MEDICINES =================
