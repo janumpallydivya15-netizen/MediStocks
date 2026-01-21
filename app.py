@@ -213,28 +213,44 @@ def add_medicine():
         return redirect(url_for("medicines"))
 
     return render_template("add_medicine.html")
+def get_medicine_by_id(med_id):
+    response = medicines_table.get_item(
+        Key={
+            'medicine_id': med_id
+        }
+    )
+    return response.get('Item')
 
 
-@app.route("/edit_medicine/<med_id>", methods=["GET", "POST"])
+@app.route('/edit_medicine/<med_id>', methods=['GET', 'POST'])
 @login_required
 def edit_medicine(med_id):
-    if request.method == "POST":
-        med_name = request.form["medicine_name"]
-        quantity = int(request.form["quantity"])
+    medicine = get_medicine_by_id(med_id)
 
-        user_email = session.get("user_email")
+    if not medicine:
+        flash("Medicine not found", "danger")
+        return redirect(url_for('dashboard'))
 
-        if quantity <= 10:
-            send_low_stock_email(user_email, med_name, quantity)
+    if request.method == 'POST':
+        name = request.form['name']
+        stock = int(request.form['stock'])
+        threshold = int(request.form['threshold'])
 
-        # update DynamoDB here
+        medicines_table.update_item(
+            Key={'medicine_id': med_id},
+            UpdateExpression="SET #n=:n, stock=:s, threshold=:t",
+            ExpressionAttributeNames={'#n': 'name'},
+            ExpressionAttributeValues={
+                ':n': name,
+                ':s': stock,
+                ':t': threshold
+            }
+        )
 
         flash("Medicine updated successfully", "success")
-        return redirect(url_for("medicines"))
+        return redirect(url_for('dashboard'))
 
-    # GET request → show edit page
-    medicine = get_medicine_by_id(med_id)
-    return render_template("edit_medicine.html", medicine=medicine)
+    return render_template('edit_medicine.html', medicine=medicine)
 
 # ALERTS PAGE
 # =================================================
