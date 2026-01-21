@@ -145,8 +145,8 @@ def dashboard():
 
     total_medicines = len(medicines)
     total_value = 0
-    low_stock_count = 0
-    expired_count = 0
+    low_stock = 0
+    expired = 0
 
     today = datetime.today().date()
 
@@ -155,24 +155,26 @@ def dashboard():
         price = float(med.get("price", 0))
         total_value += qty * price
 
-        # Low stock
         if qty < 10:
-            low_stock_count += 1
+            low_stock += 1
 
-        # Expired
         expiry_str = med.get("expiry_date")
         if expiry_str:
             expiry_date = datetime.strptime(expiry_str, "%Y-%m-%d").date()
             if expiry_date < today:
-                expired_count += 1
+                expired += 1
 
-    return render_template(
-        "dashboard.html",
-        total_medicines=total_medicines,
-        total_value=total_value,
-        low_stock_count=low_stock_count,
-        expired_count=expired_count
-    )
+    # 👇 THIS is what your template expects
+    stats = {
+        "total_medicines": total_medicines,
+        "total_value": round(total_value, 2),
+        "low_stock": low_stock,
+        "expired": expired
+    }
+
+    print("STATS DEBUG:", stats)  # temporary debug
+
+    return render_template("dashboard.html", stats=stats)
 
 # =================================================
 # MEDICINES
