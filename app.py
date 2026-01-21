@@ -427,6 +427,20 @@ def debug_user():
         "user_id": session.get("user_id"),
         "username": session.get("username")
     }
+@app.route('/fix-old-medicines')
+@login_required
+def fix_old_medicines():
+    response = medicines_table.scan()
+    for m in response.get('Items', []):
+        if 'updated_at' not in m:
+            medicines_table.update_item(
+                Key={'medicine_id': m['medicine_id']},
+                UpdateExpression='SET updated_at = :u',
+                ExpressionAttributeValues={
+                    ':u': datetime.now().isoformat()
+                }
+            )
+    return "Old medicines fixed"
 
 # Error handlers
 @app.errorhandler(404)
