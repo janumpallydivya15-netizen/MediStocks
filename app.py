@@ -214,41 +214,23 @@ def medicines():
     return render_template("medicines.html", medicines=res.get("Items", []))
 
 
-@app.route("/medicines/add", methods=["GET", "POST"])
+@app.route('/add_medicine', methods=['POST'])
 @login_required
 def add_medicine():
-    if request.method == "POST":
-        qty = int(request.form["quantity"])
-        threshold = int(request.form["threshold"])
 
-        medicines_table.put_item(
-            Item={
-                "medicine_id": str(uuid.uuid4()),
-                "user_id": session["user_id"],
-                "name": request.form["name"],
-                "category": request.form["category"],
-                "quantity": qty,
-                "threshold": threshold,
-                "expiration_date": request.form["expiration_date"],
-                "created_at": datetime.now().isoformat()
-            }
-        )
+    medicine_name = request.form['medicine_name']
+    quantity = int(request.form['quantity'])     # ✅ DEFINE FIRST
+    threshold = int(request.form['threshold'])   # ✅ DEFINE FIRST
+    email = session['email']
 
-        if qty <= threshold:
-            send_low_stock_email(
-                request.form["name"],
-                qty,
-                threshold,
-                session["email"]
-            )
-                # LOW STOCK CHECK
+    # DynamoDB put_item / update_item here
+
     if quantity <= threshold:
         message = f"{medicine_name} stock is low ({quantity})"
         send_low_stock_email(email, message)
 
-
-        flash("Medicine added successfully", "success")
-        return redirect(url_for("medicines"))
+    flash("Medicine added successfully")
+    return redirect(url_for('dashboard'))
 
     return render_template("add_medicine.html")
 def get_medicine_by_id(med_id):
