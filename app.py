@@ -233,7 +233,6 @@ def dashboard():
             pass
 
     low_stock = 0    
-    low_stock = 0
     for med in medicines:
         try:
         if int(med.get("quantity", 0)) < 10:
