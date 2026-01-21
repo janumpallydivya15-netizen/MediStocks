@@ -19,7 +19,7 @@ DYNAMODB_TABLE_USERS = os.environ.get('DYNAMODB_TABLE_USERS', 'MediStock_Users')
 print("AWS_REGION =", AWS_REGION)
 print("USERS TABLE =", DYNAMODB_TABLE_USERS)
 
-SNS_TOPIC_ARN = "arn:aws:sns:ap-south-1:120121146931:MediStockAlertsNew"
+SNS_TOPIC_ARN = "arn:aws:sns:ap-south-1:120121146931:MediStockAlerts"
 dynamodb = boto3.resource('dynamodb', region_name=AWS_REGION)
 sns_client = boto3.client('sns', region_name=AWS_REGION)
 
@@ -156,16 +156,35 @@ def logout():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    response = medicines_table.scan()
+    response = medicines_table.scan(
+        FilterExpression=Attr('user_id').eq(session['user_id'])
+    )
     medicines = response.get('Items', [])
 
-    low_stock = [m for m in medicines if int(m.get('quantity', 0)) <= int(m.get('threshold', 0))]
+    total_medicines = len(medicines)
+    low_stock = sum(
+        1 for m in medicines
+        if int(m.get('quantity', 0)) <= int(m.get('threshold', 0))
+    )
+    out_of_stock = sum(
+        1 for m in medicines
+        if int(m.get('quantity', 0)) == 0
+    )
+
+    # ✅ THIS WAS MISSING
+    stats = {
+        "total_medicines": total_medicines,
+        "low_stock": low_stock,
+        "out_of_stock": out_of_stock
+    }
 
     return render_template(
         'dashboard.html',
-        total=len(medicines),
-        low_stock=len(low_stock)
+        medicines=medicines,
+        stats=stats,          # ✅ REQUIRED
+        is_logged_in=is_logged_in()
     )
+
 
 # ================= MEDICINES =================
 @app.route('/medicines')
