@@ -141,16 +141,13 @@ def logout():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    # 1️⃣ Get medicines
-    response = medicines_table.scan()
-    medicines = response.get("Items", [])
-    low_stock = 0
-    for med in medicines:
-        try:
-        if int(med.get("quantity", 0)) < 10:
-            low_stock += 1
-    except:
-        pass
+   response = medicines_table.scan()
+medicines = response.get("Items", [])
+
+for med in medicines:
+    if int(med.get("quantity", 0)) < 10:
+        print("Low stock alert")
+
 
     # 2️⃣ Calculate total value (ADD THIS PART)
     total_value = 0
