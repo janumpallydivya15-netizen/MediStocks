@@ -1,52 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
 <h2>Edit Medicine</h2>
 
 <form method="POST" action="{{ url_for('edit_medicine', medicine_id=medicine.medicine_id) }}">
 
+    <label>Medicine Name</label>
+    <input
+        type="text"
+        name="name"
+        value="{{ medicine.name }}"
+        required
+    >
 
-    <div class="mb-3">
-        <label>Medicine Name</label>
-        <input type="text" class="form-control"
-               name="name"
-               value="{{ medicine.name }}"
-               required>
-    </div>
+    <label>Manufacturer</label>
+    <input
+        type="text"
+        name="manufacturer"
+        value="{{ medicine.manufacturer }}"
+        required
+    >
 
-    <div class="mb-3">
-        <label>Category</label>
-        <input type="text" class="form-control"
-               name="category"
-               value="{{ medicine.category }}"
-               required>
-    </div>
+    <label>Quantity</label>
+    <input
+        type="number"
+        name="quantity"
+        value="{{ medicine.quantity }}"
+        required
+    >
 
-    <div class="mb-3">
-        <label>Stock</label>
-        <input type="number" class="form-control"
-               name="stock"
-               value="{{ medicine.stock }}"
-               required>
-    </div>
+    <label>Price</label>
+    <input
+        type="number"
+        step="0.01"
+        name="price"
+        value="{{ medicine.price }}"
+        required
+    >
 
-    <div class="mb-3">
-        <label>Threshold</label>
-        <input type="number" class="form-control"
-               name="threshold"
-               value="{{ medicine.threshold }}"
-               required>
-    </div>
+    <label>Expiry Date</label>
+    <input
+        type="date"
+        name="expiry_date"
+        value="{{ medicine.expiry_date }}"
+        required
+    >
 
-    <div class="mb-3">
-        <label>Expiration Date</label>
-        <input type="date" class="form-control"
-               name="expiration_date"
-               value="{{ medicine.expiration_date }}"
-               required>
-    </div>
-
-    <button type="submit" class="btn btn-primary">
-        Update Medicine
-    </button>
+    <br><br>
+    <button type="submit">Update Medicine</button>
+    <a href="{{ url_for('medicines') }}">Cancel</a>
 
 </form>
-
+{% endblock %}
 
