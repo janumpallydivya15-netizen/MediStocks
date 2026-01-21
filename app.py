@@ -215,24 +215,27 @@ def add_medicine():
     return render_template("add_medicine.html")
 
 
-@app.route("/edit_medicine/<med_id>", methods=["POST"])
+@app.route("/edit_medicine/<med_id>", methods=["GET", "POST"])
 @login_required
 def edit_medicine(med_id):
-    med_name = request.form["medicine_name"]
-    quantity = int(request.form["quantity"])
+    if request.method == "POST":
+        med_name = request.form["medicine_name"]
+        quantity = int(request.form["quantity"])
 
-    user_email = session.get("user_email")
-    if not user_email:
-        flash("User email not found", "danger")
-        return redirect(url_for("login"))
+        user_email = session.get("user_email")
 
-    if quantity <= 10:
-        send_low_stock_email(user_email, med_name, quantity)
+        if quantity <= 10:
+            send_low_stock_email(user_email, med_name, quantity)
 
-    # update DynamoDB logic here...
+        # update DynamoDB here
 
-    flash("Medicine updated successfully", "success")
-    return redirect(url_for("dashboard"))
+        flash("Medicine updated successfully", "success")
+        return redirect(url_for("medicines"))
+
+    # GET request → show edit page
+    medicine = get_medicine_by_id(med_id)
+    return render_template("edit_medicine.html", medicine=medicine)
+
 # ALERTS PAGE
 # =================================================
 @app.route("/alerts")
