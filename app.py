@@ -216,6 +216,7 @@ def medicines():
 
 @app.route('/add_medicine', methods=['GET', 'POST'])
 @login_required
+print("✅ add_medicine route HIT")
 def add_medicine():
 
     if request.method == 'POST':
