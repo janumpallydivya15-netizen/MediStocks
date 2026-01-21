@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}Reports | MediStock{% endblock %}
+
+{% block content %}
+<div class="container-fluid main-content">
+
+    <h2 class="page-title mb-4">
+        <i class="bi bi-graph-up"></i>
+        Inventory Reports
+    </h2>
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card stat-card">
+                <h6>Total Medicines</h6>
+                <h2>{{ total_medicines }}</h2>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card stat-card warning">
+                <h6>Low Stock</h6>
+                <h2>{{ low_stock }}</h2>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card stat-card danger">
+                <h6>Out of Stock</h6>
+                <h2>{{ out_of_stock }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- Medicines Table -->
+    <div class="card">
+        <div class="card-header">
+            Medicines Overview
+        </div>
+
+        <div class="card-body p-0">
+            {% if medicines %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Category</th>
+                            <th>Quantity</th>
+                            <th>Threshold</th>
+                            <th>Expiry Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for medicine in medicines %}
+                        <tr>
+                            <td><strong>{{ medicine.name }}</strong></td>
+                            <td>{{ medicine.category }}</td>
+                            <td>{{ medicine.quantity }}</td>
+                            <td>{{ medicine.threshold }}</td>
+                            <td>{{ medicine.expiration_date }}</td>
+                            <td>
+                                {% if medicine.quantity == 0 %}
+                                    <span class="badge bg-danger">Out of Stock</span>
+                                {% elif medicine.quantity <= medicine.threshold %}
+                                    <span class="badge bg-warning text-dark">Low Stock</span>
+                                {% else %}
+                                    <span class="badge bg-success">In Stock</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center p-5 text-muted">
+                No medicines available for reports.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}
