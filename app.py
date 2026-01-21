@@ -796,6 +796,7 @@ def reports():
         low_stock=low_stock,
         out_of_stock=out_of_stock
     )
+print(app.url_map)
 
 # User Profile Page
 @app.route('/profile', methods=['GET', 'POST'])
