@@ -437,9 +437,10 @@ def logout():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    total_count = 0
-    low_stock_count = 0
-    expired_count = 0
+    total_medicines = 0
+    total_value = 0
+    low_stock = 0
+    expired = 0
 
     try:
         response = medicines_table.scan()
@@ -450,28 +451,37 @@ def dashboard():
     today = datetime.now().date()
 
     for med in medicines:
-        total_count += 1
+        total_medicines += 1
 
-        if int(med.get("quantity", 0)) <= int(med.get("reorder_level", 5)):
-            low_stock_count += 1
+        quantity = int(med.get("quantity", 0))
+        price = float(med.get("price", 0))
+        reorder_level = int(med.get("reorder_level", 5))
 
+        # total value
+        total_value += quantity * price
+
+        # low stock
+        if quantity <= reorder_level:
+            low_stock += 1
+
+        # expired
         expiry_str = med.get("expiry_date")
         if expiry_str:
             try:
                 expiry_date = datetime.strptime(expiry_str, "%Y-%m-%d").date()
                 if expiry_date < today:
-                    expired_count += 1
+                    expired += 1
             except ValueError:
                 pass
 
     stats = {
-        "total_medicines": total_count,
-        "low_stock": low_stock_count,
-        "expired": expired_count
+        "total_medicines": total_medicines,
+        "total_value": round(total_value, 2),
+        "low_stock": low_stock,
+        "expired": expired
     }
 
     return render_template("dashboard.html", stats=stats)
-
 
 # Medicines List Page
 @app.route('/medicines')
