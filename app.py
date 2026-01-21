@@ -438,7 +438,7 @@ def logout():
 @login_required
 def dashboard():
     total_medicines = 0
-    total_value = 0
+    total_value = 0   # will stay 0 because price is not stored
     low_stock = 0
     expired = 0
 
@@ -454,18 +454,14 @@ def dashboard():
         total_medicines += 1
 
         quantity = int(med.get("quantity", 0))
-        price = float(med.get("price", 0))
-        reorder_level = int(med.get("reorder_level", 5))
+        threshold = int(med.get("threshold", 0))
 
-        # total value
-        total_value += quantity * price
-
-        # low stock
-        if quantity <= reorder_level:
+        # Low stock logic (CORRECT)
+        if quantity <= threshold:
             low_stock += 1
 
-        # expired
-        expiry_str = med.get("expiry_date")
+        # Expired logic (CORRECT)
+        expiry_str = med.get("expiration_date")
         if expiry_str:
             try:
                 expiry_date = datetime.strptime(expiry_str, "%Y-%m-%d").date()
@@ -476,13 +472,12 @@ def dashboard():
 
     stats = {
         "total_medicines": total_medicines,
-        "total_value": round(total_value, 2),
+        "total_value": total_value,  # until price is added
         "low_stock": low_stock,
         "expired": expired
     }
 
     return render_template("dashboard.html", stats=stats)
-
 # Medicines List Page
 @app.route('/medicines')
 @login_required
