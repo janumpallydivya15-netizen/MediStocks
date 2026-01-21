@@ -1,38 +1,42 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h2>Medicines List</h2>
-
-<table border="1" cellpadding="10">
-    <tr>
-        <th>Name</th>
-        <th>Quantity</th>
-        <th>Actions</th>
-    </tr>
+<div class="container">
+    <h2>💊 Medicines Inventory</h2>
 
     {% for med in medicines %}
-    <tr>
-        <td>{{ med.name }}</td>
-        <td>{{ med.quantity }}</td>
-        <td>
-            <!-- Edit button -->
+    <div class="medicine-card">
+
+        <div class="medicine-info">
+            <h3>{{ med.name }}</h3>
+
+            <div class="quantity">
+                Quantity:
+                {% if med.quantity < 50 %}
+                    <span class="badge red">{{ med.quantity }} Low Stock</span>
+                {% else %}
+                    <span class="badge green">{{ med.quantity }} Available</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="actions">
             <a href="{{ url_for('edit_medicine_page', medicine_id=med.medicine_id) }}">
-                <button>Edit</button>
+                <button class="edit-btn">✏️ Edit</button>
             </a>
 
-            <!-- Delete button -->
             <form method="POST"
                   action="{{ url_for('delete_medicine', medicine_id=med.medicine_id) }}"
                   style="display:inline;">
-                <button type="submit"
-                        onclick="return confirm('Are you sure?')">
-                    Delete
+                <button class="delete-btn"
+                        onclick="return confirm('Delete this medicine?')">
+                    🗑 Delete
                 </button>
             </form>
-        </td>
-    </tr>
+        </div>
+
+    </div>
     {% endfor %}
-</table>
+</div>
 
 {% endblock %}
-
