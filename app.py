@@ -1,3 +1,7 @@
+# MUST BE FIRST
+import os
+os.environ["AWS_DEFAULT_REGION"] = "ap-south-1"
+
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 import boto3
