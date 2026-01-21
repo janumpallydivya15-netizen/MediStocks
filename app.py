@@ -214,18 +214,37 @@ def medicines():
     return render_template("medicines.html", medicines=res.get("Items", []))
 
 
+import uuid
+from decimal import Decimal
+
 @app.route('/add_medicine', methods=['GET', 'POST'])
 @login_required
-print("✅ add_medicine route HIT")
 def add_medicine():
 
     if request.method == 'POST':
-        medicine_name = request.form['medicine_name']
-        quantity = int(request.form['quantity'])
-        threshold = int(request.form['threshold'])
+        print("✅ add_medicine POST")
+
+        medicine_id = str(uuid.uuid4())
+        medicine_name = request.form.get('medicine_name')
+        quantity = int(request.form.get('quantity', 0))
+        threshold = int(request.form.get('threshold', 0))
+        price = float(request.form.get('price', 0))
         email = session['email']
 
-        # DynamoDB update here
+        print("DATA:", medicine_name, quantity, threshold, price)
+
+        medicines_table.put_item(
+            Item={
+                'medicine_id': medicine_id,   # MUST match partition key
+                'medicine_name': medicine_name,
+                'quantity': quantity,
+                'threshold': threshold,
+                'price': Decimal(str(price)),
+                'created_by': email
+            }
+        )
+
+        print("✅ DynamoDB put_item DONE")
 
         if quantity <= threshold:
             message = f"{medicine_name} stock is low ({quantity})"
@@ -236,7 +255,6 @@ def add_medicine():
 
     return render_template('add_medicine.html')
 
-LOW_STOCK_LIMIT = 50
 
 @app.route("/edit_medicine/<medicine_id>", methods=["GET", "POST"])
 def edit_medicine(medicine_id):
