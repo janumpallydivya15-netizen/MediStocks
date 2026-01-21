@@ -224,8 +224,6 @@ from decimal import Decimal
 @app.route('/medicines/edit/<medicine_id>', methods=['GET', 'POST'])
 @login_required
 def edit_medicine(medicine_id):
-    'updated_at': datetime.now().isoformat()
-
     if request.method == 'POST':
         try:
             response = medicines_table.get_item(Key={'medicine_id': medicine_id})
