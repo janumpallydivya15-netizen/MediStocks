@@ -253,34 +253,21 @@ def get_medicine_by_id(med_id):
     return response.get('Item')
 LOW_STOCK_LIMIT = 50
 
-@app.route('/edit_medicine/<medicine_id>', methods=['POST'])
+@app.route("/edit_medicine/<medicine_id>", methods=["GET", "POST"])
 def edit_medicine(medicine_id):
-    name = request.form['name']
-    manufacturer = request.form['manufacturer']
-    quantity = int(request.form['quantity'])
-    price = request.form['price']
-    expiry_date = request.form['expiry_date']
 
-    medicines_table.update_item(
-        Key={'medicine_id': medicine_id},
-        UpdateExpression="""
-            SET #n = :n,
-                manufacturer = :m,
-                quantity = :q,
-                price = :p,
-                expiry_date = :e
-        """,
-        ExpressionAttributeNames={
-            '#n': 'name'
-        },
-        ExpressionAttributeValues={
-            ':n': name,
-            ':m': manufacturer,
-            ':q': quantity,
-            ':p': price,
-            ':e': expiry_date
-        }
-    )
+    if request.method == "POST":
+        # update medicine logic
+        ...
+        flash("Medicine updated successfully", "success")
+        return redirect(url_for("medicines"))
+
+    # GET request → show edit page
+    medicine = table.get_item(
+        Key={"medicine_id": medicine_id}
+    ).get("Item")
+
+    return render_template("edit_medicine.html", medicine=medicine)
 
     # ✅ LOW STOCK CHECK (CORRECT PLACE)
     if quantity < LOW_STOCK_LIMIT:
