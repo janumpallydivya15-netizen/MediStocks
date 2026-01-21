@@ -232,8 +232,15 @@ def dashboard():
         except:
             pass
 
-    low_stock = 0      # ✅ FIX
-    expired_count = 0  # (if not already defined)
+    low_stock = 0    
+    low_stock = 0
+    for med in medicines:
+        try:
+        if int(med.get("quantity", 0)) < 10:
+            low_stock += 1
+        except:
+        pass
+
 
     return render_template(
         "dashboard.html",
