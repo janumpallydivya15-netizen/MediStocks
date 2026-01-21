@@ -1,51 +1,41 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 import boto3
-import boto3
-import os
 from decimal import Decimal
 from boto3.dynamodb.conditions import Attr
 from datetime import datetime, timedelta
 from functools import wraps
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 import logging
 import uuid
-import os
-
-from dotenv import load_dotenv   # ✅ ADD THIS
-
-load_dotenv()                    # ✅ NOW THIS WORKS
-
+from dotenv import load_dotenv
 
 # =================================================
-# ENV + APP SETUP
+# LOAD ENV
 # =================================================
 load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "dev_secret")
 
-AWS_REGION = os.getenv("AWS_REGION", "ap-south-1")
+AWS_REGION = "ap-south-1"
+
 MEDICINES_TABLE = os.getenv("DYNAMODB_TABLE_MEDICINES", "MediStock_Medicines")
 USERS_TABLE = os.getenv("DYNAMODB_TABLE_USERS", "MediStock_Users")
-# ================= SNS CONFIG (ADD HERE) =================
-SNS_TOPIC_ARN = "arn:aws:sns:ap-south-1:123456789012:MediStockAlerts"
+
+# ================= SNS CONFIG (FIXED) =================
+SNS_TOPIC_ARN = "arn:aws:sns:ap-south-1:120121146931:MediStockAlerts"
 
 sns_client = boto3.client(
     "sns",
     region_name=AWS_REGION
 )
 
-SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
-SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
-SENDER_EMAIL = os.getenv("janumpallydivya15@gmail.com")
-SENDER_PASSWORD = os.getenv("byfo cuwt jgif zof")
-
+# ================= DYNAMODB =================
 dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
 medicines_table = dynamodb.Table(MEDICINES_TABLE)
 users_table = dynamodb.Table(USERS_TABLE)
 
+# ================= LOGGING =================
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -80,23 +70,14 @@ def login_required(f):
 
 
 # ================= EMAIL FUNCTION (ADD HERE) =================
-def send_low_stock_email(med):
-    message = f"""
-🚨 LOW STOCK ALERT 🚨
-
-Medicine: {med.get('medicine_name')}
-Quantity Left: {med.get('quantity')}
-Threshold: {med.get('threshold')}
-Expiry Date: {med.get('expiry_date')}
-
-Please restock immediately.
-"""
-
-    sns_client.publish(
+def send_low_stock_email(message):
+    response = sns_client.publish(
         TopicArn=SNS_TOPIC_ARN,
-        Subject="🚨 Low Stock Alert - MediStocks",
-        Message=message
+        Message=message,
+        Subject="⚠️ Low Medicine Stock Alert"
     )
+    logger.info(f"SNS sent: {response['MessageId']}")
+
 # =================================================
 # AUTH ROUTES
 # =================================================
