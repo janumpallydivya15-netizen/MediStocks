@@ -217,56 +217,32 @@ def get_medicine_by_id(med_id):
     return response.get('Item')
 
 
-@app.route("/edit-medicine/<medicine_id>", methods=["GET", "POST"])
+@app.route("/dashboard")
 @login_required
-def edit_medicine(medicine_id):
+def dashboard():
+    response = medicines_table.scan()
+    medicines = response.get("Items", [])
 
-    response = medicines_table.get_item(
-        Key={"medicine_id": medicine_id}
+    total_value = 0
+    for med in medicines:
+        try:
+            price = float(med.get('price', 0))
+            quantity = int(med.get('quantity', 0))
+            total_value += price * quantity
+        except:
+            pass
+
+    low_stock = 0      # ✅ FIX
+    expired_count = 0  # (if not already defined)
+
+    return render_template(
+        "dashboard.html",
+        total_medicines=len(medicines),
+        total_value=round(total_value, 2),
+        low_stock=low_stock,
+        expired_count=expired_count
     )
 
-    if "Item" not in response:
-        flash("Medicine not found", "danger")
-        return redirect(url_for("medicines"))
-
-    medicine = response["Item"]
-
-    if request.method == "POST":
-        name = request.form.get("name")
-        manufacturer = request.form.get("manufacturer")
-        quantity = request.form.get("quantity")
-        price = request.form.get("price")
-        expiry_date = request.form.get("expiry_date")
-
-        if not all([name, manufacturer, quantity, price, expiry_date]):
-            flash("All fields are required", "danger")
-            return render_template("edit_medicine.html", medicine=medicine)
-
-        medicines_table.update_item(
-            Key={"medicine_id": medicine_id},
-            UpdateExpression="""
-                SET #n = :n,
-                    manufacturer = :m,
-                    quantity = :q,
-                    price = :p,
-                    expiry_date = :e
-            """,
-            ExpressionAttributeNames={
-                "#n": "name"
-            },
-            ExpressionAttributeValues={
-                ":n": name,
-                ":m": manufacturer,
-                ":q": int(quantity),                 # ✅ int is OK
-                ":p": Decimal(str(price)),           # ✅ Decimal FIX
-                ":e": expiry_date
-            }
-        )
-
-        flash("Medicine updated successfully", "success")
-        return redirect(url_for("medicines"))
-
-    return render_template("edit_medicine.html", medicine=medicine)
 # ALERTS PAGE
 # =================================================
 @app.route("/alerts")
