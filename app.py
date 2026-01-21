@@ -156,9 +156,12 @@ def logout():
 @app.route('/dashboard')
 @login_required
 def dashboard():
+    user_id = session['user_id']
+
     response = medicines_table.scan(
-        FilterExpression=Attr('user_id').eq(session['user_id'])
+        FilterExpression=Attr('user_id').eq(user_id)
     )
+
     medicines = response.get('Items', [])
 
     total_medicines = len(medicines)
@@ -177,11 +180,14 @@ def dashboard():
         "out_of_stock": out_of_stock
     }
 
+    print("DEBUG DASHBOARD:", stats)  # 👈 ADD THIS
+
     return render_template(
-        'dashboard.html',
+        "dashboard.html",
         stats=stats,
         medicines=medicines
     )
+
 
 
 
