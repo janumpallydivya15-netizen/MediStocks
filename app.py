@@ -74,13 +74,19 @@ def login_required(f):
 
 
 # ================= EMAIL FUNCTION (ADD HERE) =================
-def send_low_stock_email(message):
-    response = sns_client.publish(
+def send_low_stock_alert(medicine_name, quantity):
+    message = (
+        f"⚠️ LOW STOCK ALERT\n\n"
+        f"Medicine: {medicine_name}\n"
+        f"Available Quantity: {quantity}\n\n"
+        f"Please restock immediately."
+    )
+
+    sns_client.publish(
         TopicArn=SNS_TOPIC_ARN,
         Message=message,
         Subject="⚠️ Low Medicine Stock Alert"
     )
-    logger.info(f"SNS sent: {response['MessageId']}")
 
 # =================================================
 # AUTH ROUTES
@@ -222,6 +228,10 @@ def get_medicine_by_id(med_id):
         }
     )
     return response.get('Item')
+LOW_STOCK_LIMIT = 50
+
+if quantity < LOW_STOCK_LIMIT:
+    send_low_stock_alert(medicine_name, quantity)
 
 @app.route("/edit/<medicine_id>", methods=["GET", "POST"])
 def edit_medicine_page(medicine_id):
