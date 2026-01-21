@@ -825,6 +825,10 @@ def reports():
         out_of_stock=out_of_stock
     )
 print(app.url_map)
+@app.route("/reports")
+@login_required
+def reports():
+    return render_template("reports.html")
 
 # User Profile Page
 @app.route('/profile', methods=['GET', 'POST'])
