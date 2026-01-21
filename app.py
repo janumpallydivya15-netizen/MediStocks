@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 import boto3
+import boto3
+import os
 from decimal import Decimal
 from boto3.dynamodb.conditions import Attr
 from datetime import datetime, timedelta
@@ -30,7 +32,7 @@ USERS_TABLE = os.getenv("DYNAMODB_TABLE_USERS", "MediStock_Users")
 
 SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
-SENDER_EMAIL = os.getenv("SENDER_EMAIL")
+SENDER_EMAIL = os.getenv("janumpallydivya15@gmail.com")
 SENDER_PASSWORD = os.getenv("SENDER_PASSWORD")
 
 dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
