@@ -259,6 +259,14 @@ LOW_STOCK_LIMIT = 50
 def edit_medicine(medicine_id):
 
     if request.method == "POST":
+        medicine_name = request.form.get("medicine_name")
+        quantity = request.form.get("quantity")
+        expiry_date = request.form.get("expiry_date")
+
+        if not medicine_name or not quantity or not expiry_date:
+            flash("All fields are required", "danger")
+            return redirect(request.url)
+
         medicines_table.update_item(
             Key={"medicine_id": medicine_id},
             UpdateExpression="""
@@ -267,16 +275,16 @@ def edit_medicine(medicine_id):
                     expiry_date = :exp
             """,
             ExpressionAttributeValues={
-                ":name": request.form["medicine_name"],
-                ":qty": int(request.form["quantity"]),
-                ":exp": request.form["expiry_date"]
+                ":name": medicine_name,
+                ":qty": int(quantity),
+                ":exp": expiry_date
             }
         )
 
         flash("Medicine updated successfully", "success")
         return redirect(url_for("medicines"))
 
-    # GET → load existing medicine
+    # ---------- GET REQUEST ----------
     response = medicines_table.get_item(
         Key={"medicine_id": medicine_id}
     )
