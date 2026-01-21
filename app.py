@@ -439,50 +439,43 @@ def logout():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    total_medicines = 0
-    total_value = 0  # price not stored yet
-    low_stock = 0
-    expired = 0
+    stats = {
+        "total_medicines": 0,
+        "total_value": 0,
+        "low_stock": 0,
+        "expired": 0
+    }
 
     try:
         response = medicines_table.scan(
             FilterExpression=Attr('user_id').eq(session['user_id'])
         )
         medicines = response.get("Items", [])
-    except Exception:
-        medicines = []
 
-    today = datetime.now().date()
+        today = datetime.now().date()
 
-    for med in medicines:
-        total_medicines += 1
+        for med in medicines:
+            stats["total_medicines"] += 1
 
-        quantity = int(med.get("quantity", 0))
-        threshold = int(med.get("threshold", 0))
+            quantity = int(med.get("quantity", 0))
+            threshold = int(med.get("threshold", 0))
 
-        if quantity <= threshold:
-            low_stock += 1
+            if quantity <= threshold:
+                stats["low_stock"] += 1
 
-        expiry_str = med.get("expiration_date")
-        if expiry_str:
-            try:
-                expiry_date = datetime.strptime(expiry_str, "%Y-%m-%d").date()
-                if expiry_date < today:
-                    expired += 1
-            except ValueError:
-                pass
+            expiry = med.get("expiration_date")
+            if expiry:
+                try:
+                    expiry_date = datetime.strptime(expiry, "%Y-%m-%d").date()
+                    if expiry_date < today:
+                        stats["expired"] += 1
+                except ValueError:
+                    pass
 
-    stats = {
-        "total_medicines": total_medicines,
-        "total_value": total_value,
-        "low_stock": low_stock,
-        "expired": expired
-    }
+    except Exception as e:
+        logger.error(f"Dashboard error: {e}")
 
     return render_template("dashboard.html", stats=stats)
-
-
-# ---------------------------------------
 # Medicines List Page
 # ---------------------------------------
 @app.route('/medicines')
