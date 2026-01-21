@@ -70,7 +70,7 @@
                                 </td>
                                 <td>
                                     <div class="btn-group" role="group">
-                                        <a href="{{ url_for('edit_medicine', medicine_id=medicine.medicine_id) }}" 
+                                        <a href="{{ url_for('edit_medicine', med_id=medicine.medicine_id) }}">
                                            class="btn btn-sm btn-outline-primary" title="Edit">
                                             <i class="bi bi-pencil"></i>
                                         </a>
@@ -145,4 +145,5 @@
         new bootstrap.Modal(document.getElementById('deleteModal')).show();
     }
 </script>
+
 {% endblock %}
