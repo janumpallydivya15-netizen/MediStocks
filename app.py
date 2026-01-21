@@ -223,49 +223,29 @@ def get_medicine_by_id(med_id):
     )
     return response.get('Item')
 
-@app.route("/edit_medicine/<medicine_id>", methods=["GET", "POST"])
+@app.route("/edit_medicine/<medicine_id>", methods=["POST"])
 def edit_medicine(medicine_id):
-    if request.method == "POST":
-        medicines_table.update_item(
-            Key={"medicine_id": medicine_id},
-            UpdateExpression="""
-                SET medicine_name=:name,
-                    category=:cat,
-                    quantity=:qty,
-                    threshold=:th,
-                    price=:price,
-                    expiry_date=:exp
-            """,
-            ExpressionAttributeValues={
-                ":name": request.form["medicine_name"],
-                ":cat": request.form["category"],
-                ":qty": int(request.form["quantity"]),
-                ":th": int(request.form["threshold"]),
-                ":price": float(request.form["price"]),
-                ":exp": request.form["expiry_date"],
-            }
-        )
-        return redirect(url_for("medicines"))
+    medicine_name = request.form.get("medicine_name")
+    quantity = request.form.get("quantity")
 
-    response = medicines_table.get_item(
-        Key={"medicine_id": medicine_id}
+    if not medicine_name or not quantity:
+        flash("Medicine name and quantity are required", "danger")
+        return redirect(url_for("dashboard"))
+
+    medicines_table.update_item(
+        Key={"medicine_id": medicine_id},
+        UpdateExpression="SET #n = :name, quantity = :qty",
+        ExpressionAttributeNames={
+            "#n": "name"
+        },
+        ExpressionAttributeValues={
+            ":name": medicine_name,
+            ":qty": int(quantity)
+        }
     )
-    medicine = response.get("Item")
-    return render_template("edit_medicine.html", medicine=medicine)
-@app.route("/delete_medicine/<medicine_id>", methods=["GET"])
-def delete_medicine(medicine_id):
-    try:
-        medicines_table.delete_item(
-            Key={
-                "medicine_id": medicine_id
-            }
-        )
-        flash("Medicine deleted successfully.", "success")
-    except Exception as e:
-        print("Delete error:", e)
-        flash("Failed to delete medicine.", "danger")
 
-    return redirect(url_for("medicines"))
+    flash("Medicine updated successfully", "success")
+    return redirect(url_for("dashboard"))
 
 # ALERTS PAGE
 # =================================================
