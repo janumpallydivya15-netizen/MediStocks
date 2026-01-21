@@ -222,54 +222,59 @@ def get_medicine_by_id(med_id):
     return response.get('Item')
 
 
-@app.route('/edit_medicine/<medicine_id>', methods=['GET', 'POST'])
+@app.route("/edit-medicine/<medicine_id>", methods=["GET", "POST"])
+@login_required
 def edit_medicine(medicine_id):
-    if request.method == 'POST':
-        name = request.form['name']
-        manufacturer = request.form['manufacturer']
-        quantity = int(request.form['quantity'])
-        price = request.form['price']
-        expiry_date = request.form['expiry_date']
+    # Get medicine from DynamoDB
+    response = medicines_table.get_item(
+        Key={"medicine_id": medicine_id}
+    )
 
+    if "Item" not in response:
+        flash("Medicine not found", "danger")
+        return redirect(url_for("medicines"))
+
+    medicine = response["Item"]
+
+    if request.method == "POST":
+        # ✅ SAFE form access (no KeyError)
+        name = request.form.get("name")
+        manufacturer = request.form.get("manufacturer")
+        quantity = request.form.get("quantity")
+        price = request.form.get("price")
+        expiry_date = request.form.get("expiry_date")
+
+        # Basic validation
+        if not all([name, manufacturer, quantity, price, expiry_date]):
+            flash("All fields are required", "danger")
+            return render_template("edit_medicine.html", medicine=medicine)
+
+        # Update DynamoDB
         medicines_table.update_item(
-            Key={
-                'medicine_id': medicine_id
-            },
+            Key={"medicine_id": medicine_id},
             UpdateExpression="""
-                SET 
-                    #n = :n,
+                SET #n = :n,
                     manufacturer = :m,
                     quantity = :q,
                     price = :p,
                     expiry_date = :e
             """,
             ExpressionAttributeNames={
-                '#n': 'name'
+                "#n": "name"
             },
             ExpressionAttributeValues={
-                ':n': name,
-                ':m': manufacturer,
-                ':q': quantity,
-                ':p': price,
-                ':e': expiry_date
+                ":n": name,
+                ":m": manufacturer,
+                ":q": int(quantity),
+                ":p": float(price),
+                ":e": expiry_date
             }
         )
 
         flash("Medicine updated successfully", "success")
-        return redirect(url_for('dashboard'))
+        return redirect(url_for("medicines"))
 
-    # GET request → load existing data
-    response = medicines_table.get_item(
-        Key={'medicine_id': medicine_id}
-    )
-
-    medicine = response.get('Item')
-
-    if not medicine:
-        flash("Medicine not found", "danger")
-        return redirect(url_for('dashboard'))
-
-    return render_template('edit_medicine.html', medicine=medicine)
+    return render_template("edit_medicine.html", medicine=medicine)
 
 # ALERTS PAGE
 # =================================================
