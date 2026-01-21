@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 import boto3
+from decimal import Decimal
 from boto3.dynamodb.conditions import Attr
 from datetime import datetime, timedelta
 from functools import wraps
@@ -225,7 +226,7 @@ def get_medicine_by_id(med_id):
 @app.route("/edit-medicine/<medicine_id>", methods=["GET", "POST"])
 @login_required
 def edit_medicine(medicine_id):
-    # Get medicine from DynamoDB
+
     response = medicines_table.get_item(
         Key={"medicine_id": medicine_id}
     )
@@ -237,19 +238,16 @@ def edit_medicine(medicine_id):
     medicine = response["Item"]
 
     if request.method == "POST":
-        # ✅ SAFE form access (no KeyError)
         name = request.form.get("name")
         manufacturer = request.form.get("manufacturer")
         quantity = request.form.get("quantity")
         price = request.form.get("price")
         expiry_date = request.form.get("expiry_date")
 
-        # Basic validation
         if not all([name, manufacturer, quantity, price, expiry_date]):
             flash("All fields are required", "danger")
             return render_template("edit_medicine.html", medicine=medicine)
 
-        # Update DynamoDB
         medicines_table.update_item(
             Key={"medicine_id": medicine_id},
             UpdateExpression="""
@@ -265,8 +263,8 @@ def edit_medicine(medicine_id):
             ExpressionAttributeValues={
                 ":n": name,
                 ":m": manufacturer,
-                ":q": int(quantity),
-                ":p": float(price),
+                ":q": int(quantity),                 # ✅ int is OK
+                ":p": Decimal(str(price)),           # ✅ Decimal FIX
                 ":e": expiry_date
             }
         )
@@ -275,7 +273,6 @@ def edit_medicine(medicine_id):
         return redirect(url_for("medicines"))
 
     return render_template("edit_medicine.html", medicine=medicine)
-
 # ALERTS PAGE
 # =================================================
 @app.route("/alerts")
