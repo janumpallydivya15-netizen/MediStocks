@@ -435,8 +435,7 @@ def logout():
 
 # ---------------------------------------
 # Dashboard Page
-# ---------------------------------------
-@app.route("/dashboard")
+# ---------------------------------------@app.route("/dashboard")
 @login_required
 def dashboard():
     stats = {
@@ -448,34 +447,35 @@ def dashboard():
 
     try:
         response = medicines_table.scan(
-            FilterExpression=Attr('user_id').eq(session['user_id'])
+            FilterExpression=Attr("user_id").eq(session["user_id"])
         )
         medicines = response.get("Items", [])
-
-        today = datetime.now().date()
-
-        for med in medicines:
-            stats["total_medicines"] += 1
-
-            quantity = int(med.get("quantity", 0))
-            threshold = int(med.get("threshold", 0))
-
-            if quantity <= threshold:
-                stats["low_stock"] += 1
-
-            expiry = med.get("expiration_date")
-            if expiry:
-                try:
-                    expiry_date = datetime.strptime(expiry, "%Y-%m-%d").date()
-                    if expiry_date < today:
-                        stats["expired"] += 1
-                except ValueError:
-                    pass
-
     except Exception as e:
         logger.error(f"Dashboard error: {e}")
+        medicines = []
+
+    today = datetime.now().date()
+
+    for med in medicines:
+        stats["total_medicines"] += 1
+
+        quantity = int(med.get("quantity", 0))
+        threshold = int(med.get("threshold", 0))
+
+        if quantity <= threshold:
+            stats["low_stock"] += 1
+
+        expiry = med.get("expiration_date")
+        if expiry:
+            try:
+                expiry_date = datetime.strptime(expiry, "%Y-%m-%d").date()
+                if expiry_date < today:
+                    stats["expired"] += 1
+            except ValueError:
+                pass
 
     return render_template("dashboard.html", stats=stats)
+
 # Medicines List Page
 # ---------------------------------------
 @app.route('/medicines')
@@ -544,6 +544,88 @@ def add_medicine():
             flash('Error adding medicine', 'danger')
 
     return render_template('add_medicine.html')
+# ---------------------------------------
+# Edit Medicine Page
+# ---------------------------------------
+@app.route('/medicines/edit/<medicine_id>', methods=['GET', 'POST'])
+@login_required
+def edit_medicine(medicine_id):
+    try:
+        # Fetch medicine
+        response = medicines_table.get_item(
+            Key={'medicine_id': medicine_id}
+        )
+        medicine = response.get('Item')
+
+        if not medicine:
+            flash('Medicine not found.', 'danger')
+            return redirect(url_for('medicines'))
+
+        # Security check: only owner can edit
+        if medicine.get('user_id') != session.get('user_id'):
+            flash('Unauthorized access.', 'danger')
+            return redirect(url_for('medicines'))
+
+        if request.method == 'POST':
+            name = request.form.get('name', '').strip()
+            category = request.form.get('category', '').strip()
+            quantity = request.form.get('quantity', '0')
+            threshold = request.form.get('threshold', '0')
+            expiration_date = request.form.get('expiration_date', '')
+
+            if not all([name, category, quantity, threshold, expiration_date]):
+                flash('All fields are required.', 'danger')
+                return render_template('edit_medicine.html', medicine=medicine)
+
+            try:
+                quantity = int(quantity)
+                threshold = int(threshold)
+
+                medicines_table.update_item(
+                    Key={'medicine_id': medicine_id},
+                    UpdateExpression="""
+                        SET #name = :name,
+                            category = :category,
+                            quantity = :quantity,
+                            threshold = :threshold,
+                            expiration_date = :expiration_date,
+                            updated_at = :updated_at
+                    """,
+                    ExpressionAttributeNames={
+                        '#name': 'name'
+                    },
+                    ExpressionAttributeValues={
+                        ':name': name,
+                        ':category': category,
+                        ':quantity': quantity,
+                        ':threshold': threshold,
+                        ':expiration_date': expiration_date,
+                        ':updated_at': datetime.now().isoformat()
+                    }
+                )
+
+                # Low stock alert after update
+                if quantity <= threshold:
+                    send_low_stock_alert(
+                        name,
+                        quantity,
+                        threshold,
+                        session.get('email')
+                    )
+
+                flash('Medicine updated successfully!', 'success')
+                return redirect(url_for('medicines'))
+
+            except ValueError:
+                flash('Quantity and threshold must be numbers.', 'danger')
+                return render_template('edit_medicine.html', medicine=medicine)
+
+        return render_template('edit_medicine.html', medicine=medicine)
+
+    except Exception as e:
+        logger.error(f"Edit medicine error: {e}")
+        flash('An error occurred while editing the medicine.', 'danger')
+        return redirect(url_for('medicines'))
 
 # ---------------------------------------
 # Alerts Page
