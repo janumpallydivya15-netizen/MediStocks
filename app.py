@@ -811,6 +811,9 @@ def reports():
         out_of_stock=out_of_stock
     )
 print(app.url_map)
+@app.route("/reports")
+def reports():
+    pass
 
 # User Profile Page
 @app.route('/profile', methods=['GET', 'POST'])
