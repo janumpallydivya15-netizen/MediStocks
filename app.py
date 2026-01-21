@@ -176,10 +176,12 @@ def dashboard():
 
     today = datetime.today().date()
 
-    for med in medicines:
-        qty = int(med.get("quantity", 0))
-        price = float(med.get("price", 0))
-        total_value += qty * price
+    items = medicines_table.scan().get('Items', [])
+
+total_value = sum(
+    int(item.get('quantity', 0)) * float(item.get('price', 0))
+    for item in items
+)
 
         if qty < 10:
             low_stock += 1
