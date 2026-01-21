@@ -215,46 +215,25 @@ def add_medicine():
     return render_template("add_medicine.html")
 
 
-@app.route("/medicines/edit/<medicine_id>", methods=["GET", "POST"])
+@app.route("/edit_medicine/<med_id>", methods=["POST"])
 @login_required
-def edit_medicine(medicine_id):
-    res = medicines_table.get_item(Key={"medicine_id": medicine_id})
-    medicine = res.get("Item")
+def edit_medicine(med_id):
+    med_name = request.form["medicine_name"]
+    quantity = int(request.form["quantity"])
 
-    if not medicine or medicine["user_id"] != session["user_id"]:
-        flash("Unauthorized", "danger")
-        return redirect(url_for("medicines"))
+    user_email = session.get("user_email")
+    if not user_email:
+        flash("User email not found", "danger")
+        return redirect(url_for("login"))
 
-    if request.method == "POST":
-        qty = int(request.form["quantity"])
-        threshold = int(request.form["threshold"])
+    if quantity <= 10:
+        send_low_stock_email(user_email, med_name, quantity)
 
-        medicines_table.update_item(
-            Key={"medicine_id": medicine_id},
-            UpdateExpression="""
-                SET #n=:n, category=:c, quantity=:q,
-                    threshold=:t, expiration_date=:e
-            """,
-            ExpressionAttributeNames={"#n": "name"},
-            ExpressionAttributeValues={
-                ":n": request.form["name"],
-                ":c": request.form["category"],
-                ":q": qty,
-                ":t": threshold,
-                ":e": request.form["expiration_date"]
-            }
-        )
+    # update DynamoDB logic here...
 
-        if qty <= threshold:
-            send_low_stock_email(user_email, med_name, quantity)
-
-            
-
-        flash("Medicine updated successfully", "success")
-        return redirect(url_for("medicines"))
-
-    return render_template("edit_medicine.html", medicine=medicine)
-# =================================================
+    flash("Medicine updated successfully", "success")
+    return redirect(url_for("dashboard"))
+===================================
 # ALERTS PAGE
 # =================================================
 @app.route("/alerts")
