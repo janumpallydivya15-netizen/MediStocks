@@ -141,11 +141,12 @@ def logout():
 @app.route("/dashboard")
 @login_required
 def dashboard():
+    # 1️⃣ Get medicines
     response = medicines_table.scan()
     medicines = response.get("Items", [])
 
+    # 2️⃣ Calculate total value (ADD THIS PART)
     total_value = 0
-
     for med in medicines:
         try:
             price = float(med.get('price', 0))
@@ -153,34 +154,15 @@ def dashboard():
             total_value += price * quantity
         except:
             pass
-    stats = {
-        "total_medicines": 0,
-        "low_stock": 0,
-        "expired": 0,
-        "total_value": 0
-    }
 
-    res = medicines_table.scan(
-        FilterExpression=Attr("user_id").eq(session["user_id"])
+    # 3️⃣ Return dashboard (THIS STAYS AT THE END)
+    return render_template(
+        "dashboard.html",
+        total_medicines=len(medicines),
+        total_value=round(total_value, 2),
+        low_stock=low_stock,
+        expired_count=expired_count
     )
-    medicines = res.get("Items", [])
-
-    today = datetime.now().date()
-
-    for m in medicines:
-        stats["total_medicines"] += 1
-
-        qty = int(m.get("quantity", 0))
-        threshold = int(m.get("threshold", 0))
-
-        if qty <= threshold:
-            stats["low_stock"] += 1
-
-        exp = m.get("expiration_date")
-        if exp and datetime.strptime(exp, "%Y-%m-%d").date() < today:
-            stats["expired"] += 1
-
-    return render_template("dashboard.html", stats=stats)
 
 # =================================================
 # MEDICINES
