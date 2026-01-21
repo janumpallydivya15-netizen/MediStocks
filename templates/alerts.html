@@ -1,24 +1,23 @@
 {% extends "base.html" %}
+
 {% block content %}
 <h2>Alerts</h2>
 
-<h4>Low Stock</h4>
+<h3>Low Stock Medicines</h3>
 <ul>
-{% for m in low_stock %}
-<li>{{ m.name }} ({{ m.quantity }})</li>
-{% else %}
-<li>No low stock items</li>
-{% endfor %}
+    {% for med in low_stock %}
+        <li>{{ med.medicine_name }} (Qty: {{ med.quantity }})</li>
+    {% else %}
+        <li>No low stock medicines</li>
+    {% endfor %}
 </ul>
 
-<h4>Expiring Soon</h4>
+<h3>Expiring Soon</h3>
 <ul>
-{% for m in expiring_soon %}
-<li>{{ m.name }} ({{ m.days_remaining }} days)</li>
-{% else %}
-<li>No expiring medicines</li>
-{% endfor %}
+    {% for med in expiring_soon %}
+        <li>{{ med.medicine_name }} (Expiry: {{ med.expiry_date }})</li>
+    {% else %}
+        <li>No expiring medicines</li>
+    {% endfor %}
 </ul>
-{% endblock %}
-
 {% endblock %}
