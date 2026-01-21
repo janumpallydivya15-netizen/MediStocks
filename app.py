@@ -259,24 +259,36 @@ LOW_STOCK_LIMIT = 50
 def edit_medicine(medicine_id):
 
     if request.method == "POST":
-        # update medicine logic
-        ...
+        medicines_table.update_item(
+            Key={"medicine_id": medicine_id},
+            UpdateExpression="""
+                SET medicine_name = :name,
+                    quantity = :qty,
+                    expiry_date = :exp
+            """,
+            ExpressionAttributeValues={
+                ":name": request.form["medicine_name"],
+                ":qty": int(request.form["quantity"]),
+                ":exp": request.form["expiry_date"]
+            }
+        )
+
         flash("Medicine updated successfully", "success")
         return redirect(url_for("medicines"))
 
-    # GET request → show edit page
-    medicine = table.get_item(
+    # GET → load existing medicine
+    response = medicines_table.get_item(
         Key={"medicine_id": medicine_id}
-    ).get("Item")
+    )
+
+    medicine = response.get("Item")
+
+    if not medicine:
+        flash("Medicine not found", "danger")
+        return redirect(url_for("medicines"))
 
     return render_template("edit_medicine.html", medicine=medicine)
 
-    # ✅ LOW STOCK CHECK (CORRECT PLACE)
-    if quantity < LOW_STOCK_LIMIT:
-        send_low_stock_alert(name, quantity)
-
-    flash("Medicine updated successfully", "success")
-    return redirect(url_for('dashboard'))
 @app.route("/delete_medicine/<medicine_id>", methods=["POST"])
 def delete_medicine(medicine_id):
     medicines_table.delete_item(
