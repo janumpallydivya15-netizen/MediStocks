@@ -434,35 +434,20 @@ def logout():
     return redirect(url_for('index'))
 
 # Dashboard Page
-@app.route('/dashboard')
+@app.route("/dashboard")
 @login_required
 def dashboard():
-    response = medicines_table.scan(
-        FilterExpression=Attr('user_id').eq(session['user_id'])
-    )
-    medicines = response.get('Items', [])
-
-    total_medicines = len(medicines)
-    low_stock = sum(
-        1 for m in medicines
-        if int(m.get('quantity', 0)) <= int(m.get('threshold', 0))
-    )
-    out_of_stock = sum(
-        1 for m in medicines
-        if int(m.get('quantity', 0)) == 0
-    )
-
     stats = {
-        "total_medicines": total_medicines,
-        "low_stock": low_stock,
-        "out_of_stock": out_of_stock
+        "total_medicines": 0,
+        "low_stock": 0,
+        "expired": 0
     }
 
     return render_template(
-        'dashboard.html',
-        medicines=medicines,
-        stats=stats   # 🔴 THIS LINE FIXES EVERYTHING
+        "dashboard.html",
+        stats=stats
     )
+
 
 # Medicines List Page
 @app.route('/medicines')
