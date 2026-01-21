@@ -179,8 +179,8 @@ def dashboard():
 
     return render_template(
         'dashboard.html',
-        medicines=medicines,
-        stats=stats        # ✅ THIS FIXES EVERYTHING
+        stats=stats,
+        medicines=medicines
     )
 
 
