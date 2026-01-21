@@ -230,32 +230,41 @@ def get_medicine_by_id(med_id):
     return response.get('Item')
 LOW_STOCK_LIMIT = 50
 
-if quantity < LOW_STOCK_LIMIT:
-    send_low_stock_alert(medicine_name, quantity)
+@app.route('/edit_medicine/<medicine_id>', methods=['POST'])
+def edit_medicine(medicine_id):
+    name = request.form['name']
+    manufacturer = request.form['manufacturer']
+    quantity = int(request.form['quantity'])
+    price = request.form['price']
+    expiry_date = request.form['expiry_date']
 
-@app.route("/edit/<medicine_id>", methods=["GET", "POST"])
-def edit_medicine_page(medicine_id):
-
-    if request.method == "POST":
-        medicines_table.update_item(
-            Key={"medicine_id": medicine_id},
-            UpdateExpression="SET #n = :name, quantity = :qty",
-            ExpressionAttributeNames={"#n": "name"},
-            ExpressionAttributeValues={
-                ":name": request.form.get("medicine_name"),
-                ":qty": int(request.form.get("quantity"))
-            }
-        )
-        flash("Medicine updated successfully", "success")
-        return redirect(url_for("medicines"))
-
-    # GET request → load medicine
-    response = medicines_table.get_item(
-        Key={"medicine_id": medicine_id}
+    medicines_table.update_item(
+        Key={'medicine_id': medicine_id},
+        UpdateExpression="""
+            SET #n = :n,
+                manufacturer = :m,
+                quantity = :q,
+                price = :p,
+                expiry_date = :e
+        """,
+        ExpressionAttributeNames={
+            '#n': 'name'
+        },
+        ExpressionAttributeValues={
+            ':n': name,
+            ':m': manufacturer,
+            ':q': quantity,
+            ':p': price,
+            ':e': expiry_date
+        }
     )
-    medicine = response.get("Item")
 
-    return render_template("edit_medicine.html", medicine=medicine)
+    # ✅ LOW STOCK CHECK (CORRECT PLACE)
+    if quantity < LOW_STOCK_LIMIT:
+        send_low_stock_alert(name, quantity)
+
+    flash("Medicine updated successfully", "success")
+    return redirect(url_for('dashboard'))
 @app.route("/delete_medicine/<medicine_id>", methods=["POST"])
 def delete_medicine(medicine_id):
     medicines_table.delete_item(
