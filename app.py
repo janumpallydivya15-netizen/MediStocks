@@ -182,7 +182,7 @@ def dashboard():
         'dashboard.html',
         medicines=medicines,
         stats=stats,          # ✅ REQUIRED
-        is_logged_in=is_logged_in()
+        
     )
 
 
