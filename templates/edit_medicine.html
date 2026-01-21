@@ -1,6 +1,7 @@
 <h2>Edit Medicine</h2>
 
-<form method="POST" action="{{ url_for('edit_medicine', med_id=medicine.medicine_id) }}">
+<form method="POST" action="{{ url_for('edit_medicine', medicine_id=medicine.medicine_id) }}">
+
 
     <div class="mb-3">
         <label>Medicine Name</label>
@@ -47,4 +48,5 @@
     </button>
 
 </form>
+
 
