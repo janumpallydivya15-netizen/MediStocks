@@ -168,19 +168,18 @@ def dashboard():
     medicines = response.get("Items", [])
 
     total_medicines = len(medicines)
-    total_value = 0
     low_stock = 0
     expired = 0
 
     today = datetime.today().date()
 
-    items = medicines_table.scan().get('Items', [])
+    # Calculate total value
+    total_value = sum(
+        int(item.get("quantity", 0)) * float(item.get("price", 0))
+        for item in medicines
+    )
 
-total_value = sum(
-    int(item.get('quantity', 0)) * float(item.get('price', 0))
-    for item in items)
-
-    # 👇 THIS is what your template expects
+    # Stats dictionary for template
     stats = {
         "total_medicines": total_medicines,
         "total_value": round(total_value, 2),
@@ -188,7 +187,7 @@ total_value = sum(
         "expired": expired
     }
 
-    print("STATS DEBUG:", stats)  # temporary debug
+    print("STATS DEBUG:", stats)
 
     return render_template("dashboard.html", stats=stats)
 @app.route("/update_stock", methods=["POST"])
