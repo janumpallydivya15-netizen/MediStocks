@@ -176,20 +176,23 @@ def dashboard():
     total_medicines = len(medicines)
 
     total_value = sum(
-        int(m.get("quantity", 0)) * float(m.get("price", 0))
+        Decimal(m.get("quantity", 0)) * m.get("price", Decimal("0"))
         for m in medicines
     )
 
-    low_stock = sum(1 for m in medicines if int(m.get("quantity", 0)) < 10)
+    low_stock = sum(
+        1 for m in medicines if int(m.get("quantity", 0)) < 10
+    )
 
     stats = {
         "total_medicines": total_medicines,
-        "total_value": round(total_value, 2),
+        "total_value": round(total_value, 2),  # works with Decimal
         "low_stock": low_stock
     }
 
-    return render_template("dashboard.html", stats=stats)
+    print("DASHBOARD DEBUG:", stats)  # 👈 TEMP DEBUG
 
+    return render_template("dashboard.html", stats=stats)
 @app.route("/update_stock", methods=["POST"])
 def update_stock():
     data = request.json
