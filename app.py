@@ -182,8 +182,12 @@ total_value = sum(
     int(item.get('quantity', 0)) * float(item.get('price', 0))
     for item in items)
 
-        if qty < 10:
-            low_stock += 1
+      med = get_medicine_by_id(med_id)
+qty = int(med.get("quantity", 0))
+
+if qty < 10:
+    send_low_stock_email(med)
+
 
         expiry_str = med.get("expiry_date")
         if expiry_str:
