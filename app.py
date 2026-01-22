@@ -71,19 +71,17 @@ logger = logging.getLogger(__name__)
 # =================================================
 # GLOBAL SAFETY NET (NO stats ERROR EVER)
 # =================================================
-@app.context_processor
-def inject_stats():
-    """
-    Global safety net so `stats` is NEVER undefined in templates
-    """
-    return {
-        "stats": {
-            "total_medicines": 0,
-            "total_value": 0,
-            "low_stock": 0,
-            "expired": 0
-        }
+@app.route("/stats")
+def stats():
+    low_stock = get_low_stock()
+    expired = get_expired_medicines()
+
+    stats = {
+        "low_stock": low_stock,
+        "expired": expired
     }
+
+    return jsonify(stats)
 
 
 # =================================================
