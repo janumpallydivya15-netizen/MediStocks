@@ -326,9 +326,7 @@ def dashboard():
         stats=stats,
         meds=meds
     )
-        # Calculate total stock value (if you want to add price field later)
-        total_stock = sum(m["current_quantity"] for m in meds)
-
+    
         return render_template(
             "dashboard.html",
             total=total_medicines,
