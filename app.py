@@ -171,7 +171,7 @@ def dashboard():
     )
     medicines = response.get("Items", [])
 
-   today = date.today()
+    today = date.today()
 
     total_medicines = len(medicines)
     total_value = Decimal("0")
@@ -179,28 +179,26 @@ def dashboard():
     expired = 0
 
     for m in medicines:
-        # ----- Quantity -----
         try:
             qty = int(m.get("quantity", 0))
         except:
             qty = 0
 
-        # ----- Price -----
         price = m.get("price", Decimal("0"))
         if not isinstance(price, Decimal):
             price = Decimal(str(price))
 
         total_value += price * qty
 
-        # ----- Low stock -----
         if qty < 10:
             low_stock += 1
 
-        # ----- Expiry check -----
         expiry_str = m.get("expiry_date")
         if expiry_str:
             try:
-                expiry_date = datetime.strptime(expiry_str, "%Y-%m-%d").date()
+                expiry_date = datetime.strptime(
+                    expiry_str, "%Y-%m-%d"
+                ).date()
                 if expiry_date < today:
                     expired += 1
             except:
@@ -213,9 +211,10 @@ def dashboard():
         "expired": expired
     }
 
-    print("DASHBOARD FINAL DEBUG:", stats)
+    print("DASHBOARD DEBUG:", stats)
 
     return render_template("dashboard.html", stats=stats)
+
 @app.route("/update_stock", methods=["POST"])
 def update_stock():
     data = request.json
