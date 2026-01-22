@@ -212,6 +212,8 @@ def update_stock():
         expiry_date = datetime.strptime(expiry_str, "%Y-%m-%d").date()
         if expiry_date <= date.today() + timedelta(days=30):
             send_expiry_alert_email(med)
+            print("UPDATED:", medicine_id, data.get("quantity"))
+
 
     return jsonify({"status": "updated"})
 
