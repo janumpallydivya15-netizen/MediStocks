@@ -48,6 +48,17 @@ def send_low_stock_email(medicine_name, quantity):
 
 MEDICINES_TABLE = os.getenv("DYNAMODB_TABLE_MEDICINES", "MediStock_Medicines")
 USERS_TABLE = os.getenv("DYNAMODB_TABLE_USERS", "MediStock_Users")
+def get_all_medicines():
+    response = table.scan()
+    items = response.get("Items", [])
+
+    # Handle pagination (VERY IMPORTANT)
+    while "LastEvaluatedKey" in response:
+        response = table.scan(ExclusiveStartKey=response["LastEvaluatedKey"])
+        items.extend(response.get("Items", []))
+
+    return items
+
 
 # ================= SNS CONFIG (FIXED) =================
 SNS_TOPIC_ARN = "arn:aws:sns:ap-south-1:120121146931:MediStockAlerts"
