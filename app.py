@@ -171,8 +171,7 @@ def dashboard():
     )
     medicines = response.get("Items", [])
 
-    today = datetime.date.today()
-
+   today = date.today()
 
     total_medicines = len(medicines)
     total_value = Decimal("0")
