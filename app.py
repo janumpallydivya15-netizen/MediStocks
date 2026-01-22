@@ -162,58 +162,43 @@ def logout():
 # =================================================
 # DASHBOARD
 # =================================================
+from decimal import Decimal
+from datetime import datetime
+
 @app.route("/dashboard")
 def dashboard():
-    user_id = session["user_id"]
-
-    response = medicines_table.scan(
-        FilterExpression=Attr("user_id").eq(user_id)
-    )
-    medicines = response.get("Items", [])
-
-    today = date.today()
+    medicines = get_all_medicines()  # list of dicts
 
     total_medicines = len(medicines)
-    total_value = Decimal("0")
+    total_value = Decimal("0.00")
     low_stock = 0
     expired = 0
 
-    for m in medicines:
-        try:
-            qty = int(m.get("quantity", 0))
-        except:
-            qty = 0
+    today = datetime.today().date()
 
-        price = m.get("price", Decimal("0"))
-        if not isinstance(price, Decimal):
-            price = Decimal(str(price))
+    for med in medicines:
+        qty = int(med.get("quantity", 0))
+        price = Decimal(str(med.get("price", "0")))
+        threshold = int(med.get("threshold", 10))
 
         total_value += price * qty
 
-        if qty < 10:
+        if qty < threshold:
             low_stock += 1
 
-        expiry_str = m.get("expiry_date")
-        if expiry_str:
-            try:
-                expiry_date = datetime.strptime(
-                    expiry_str, "%Y-%m-%d"
-                ).date()
-                if expiry_date < today:
-                    expired += 1
-            except:
-                pass
+        expiry = med.get("expiry_date")
+        if expiry:
+            expiry_date = datetime.strptime(expiry, "%Y-%m-%d").date()
+            if expiry_date < today:
+                expired += 1
 
-    stats = {
-        "total_medicines": total_medicines,
-        "total_value": round(total_value, 2),
-        "low_stock": low_stock,
-        "expired": expired
-    }
-
-    print("DASHBOARD DEBUG:", stats)
-
-    return render_template("dashboard.html", stats=stats)
+    return render_template(
+        "dashboard.html",
+        total_medicines=total_medicines,
+        total_value=total_value,
+        low_stock=low_stock,
+        expired=expired
+    )
 
 @app.route("/update_stock", methods=["POST"])
 def update_stock():
