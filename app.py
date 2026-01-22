@@ -40,7 +40,7 @@ sns_client = boto3.client(
 # ================= DYNAMODB =================
 # ================= DYNAMODB SETUP =================
 dynamodb = boto3.resource("dynamodb", region_name="ap-south-1")
-table = dynamodb.Table("medistocks")   # 👈 EXACT name from AWS
+table = dynamodb.Table("MediStock_Medicines")
 
 medicines_table = dynamodb.Table(MEDICINES_TABLE)
 users_table = dynamodb.Table(USERS_TABLE)
