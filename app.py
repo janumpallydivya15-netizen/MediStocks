@@ -268,30 +268,44 @@ def logout():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    """Main dashboard with statistics"""
     try:
-        table = dynamodb.Table(MEDICINE_TABLE)
-        meds = decimal_to_float(table.scan().get("Items", []))
+        meds = get_all_medicines()
 
-        # Calculate statistics
-        total_medicines = len(meds)
-        low_stock = sum(1 for m in meds if m["current_quantity"] <= m["threshold_quantity"])
-        out_of_stock = sum(1 for m in meds if m["current_quantity"] == 0)
-        
-        # Check for expired medicines
-        expired = 0
-        expiring_soon = 0
-        today = datetime.now()
-        
-        for m in meds:
-            try:
-                exp_date = datetime.fromisoformat(m["expiry_date"])
-                if exp_date < today:
-                    expired += 1
-                elif exp_date < today + timedelta(days=30):
-                    expiring_soon += 1
-            except:
-                pass
+        total = len(meds)
+        low_stock = sum(
+            1 for m in meds
+            if int(m.get("current_quantity", 0)) <= int(m.get("threshold_quantity", 0))
+        )
+
+        expired = sum(
+            1 for m in meds
+            if m.get("expiry_date") and m["expiry_date"] < datetime.today().strftime("%Y-%m-%d")
+        )
+
+        stats = {
+            "total_medicines": total,
+            "low_stock": low_stock,
+            "expired": expired
+        }
+
+        return render_template(
+            "dashboard.html",
+            stats=stats,
+            meds=meds
+        )
+
+    except Exception as e:
+        print("Dashboard error:", e)
+
+        return render_template(
+            "dashboard.html",
+            stats={
+                "total_medicines": 0,
+                "low_stock": 0,
+                "expired": 0
+            },
+            meds=[]
+        )
 
         # Get recent alerts
         alerts_table = dynamodb.Table(ALERT_LOGS_TABLE)
