@@ -162,8 +162,6 @@ def logout():
 # =================================================
 # DASHBOARD
 # =================================================
-from boto3.dynamodb.conditions import Attr
-
 @app.route("/dashboard")
 def dashboard():
     user_id = session["user_id"]
@@ -173,24 +171,49 @@ def dashboard():
     )
     medicines = response.get("Items", [])
 
+    today = date.today()
+
     total_medicines = len(medicines)
+    total_value = Decimal("0")
+    low_stock = 0
+    expired = 0
 
-    total_value = sum(
-        Decimal(m.get("quantity", 0)) * m.get("price", Decimal("0"))
-        for m in medicines
-    )
+    for m in medicines:
+        # ----- Quantity -----
+        try:
+            qty = int(m.get("quantity", 0))
+        except:
+            qty = 0
 
-    low_stock = sum(
-        1 for m in medicines if int(m.get("quantity", 0)) < 10
-    )
+        # ----- Price -----
+        price = m.get("price", Decimal("0"))
+        if not isinstance(price, Decimal):
+            price = Decimal(str(price))
+
+        total_value += price * qty
+
+        # ----- Low stock -----
+        if qty < 10:
+            low_stock += 1
+
+        # ----- Expiry check -----
+        expiry_str = m.get("expiry_date")
+        if expiry_str:
+            try:
+                expiry_date = datetime.strptime(expiry_str, "%Y-%m-%d").date()
+                if expiry_date < today:
+                    expired += 1
+            except:
+                pass
 
     stats = {
         "total_medicines": total_medicines,
-        "total_value": round(total_value, 2),  # works with Decimal
-        "low_stock": low_stock
+        "total_value": round(total_value, 2),
+        "low_stock": low_stock,
+        "expired": expired
     }
 
-    print("DASHBOARD DEBUG:", stats)  # 👈 TEMP DEBUG
+    print("DASHBOARD FINAL DEBUG:", stats)
 
     return render_template("dashboard.html", stats=stats)
 @app.route("/update_stock", methods=["POST"])
