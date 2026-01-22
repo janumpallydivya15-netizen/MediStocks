@@ -56,15 +56,17 @@ def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
 
 
+from functools import wraps
+from flask import session, redirect, url_for
+
 def login_required(f):
-    """Decorator to protect routes that require authentication"""
     @wraps(f)
     def decorated(*args, **kwargs):
         if "user_id" not in session:
-            flash("Please login first", "warning")
             return redirect(url_for("login"))
         return f(*args, **kwargs)
     return decorated
+
 
 
 # --------------------------------------------------
@@ -209,6 +211,8 @@ def index():
     return render_template("index.html")
 
 
+from flask import request, render_template, redirect, url_for, session
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -227,15 +231,16 @@ def login():
         if users:
             user = users[0]
 
-            if user.get("password") == password:  # (plain text for now)
-                # ✅ SET SESSION
+            # TEMP: plain-text password check
+            if user.get("password") == password:
+                session.clear()  # IMPORTANT
                 session["user_id"] = user["user_id"]
                 session["email"] = user["email"]
 
-                # ✅ REDIRECT TO DASHBOARD
+                print("LOGIN OK → SESSION:", dict(session))  # DEBUG
+
                 return redirect(url_for("dashboard"))
 
-        # ❌ Login failed
         return render_template(
             "login.html",
             error="Invalid email or password"
