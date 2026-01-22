@@ -249,10 +249,10 @@ def medicines():
         medicines=response.get("Items", [])
     )
 
-@app.route("/add-medicine", methods=["POST"])
+@app.route("/add-medicine", methods=["GET", "POST"])
 def add_medicine():
-    if "user_id" not in session:
-        return redirect(url_for("login"))
+    if request.method == "GET":
+        return redirect(url_for("dashboard"))
 
     data = request.form
 
