@@ -211,7 +211,7 @@ def index():
     return render_template("index.html")
 
 
-from flask import request, render_template, redirect, url_for, session
+from boto3.dynamodb.conditions import Key
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -221,75 +221,29 @@ def login():
 
         table = dynamodb.Table(USERS_TABLE)
 
-        response = table.scan(
-            FilterExpression="email = :e",
-            ExpressionAttributeValues={":e": email}
+        response = table.query(
+            IndexName="email-index",
+            KeyConditionExpression=Key("email").eq(email)
         )
 
         users = response.get("Items", [])
+        print("USERS FOUND:", users)
 
         if users:
             user = users[0]
 
-            # TEMP: plain-text password check
             if user.get("password") == password:
-                session.clear()  # IMPORTANT
+                session.clear()
                 session["user_id"] = user["user_id"]
                 session["email"] = user["email"]
 
-                print("LOGIN OK → SESSION:", dict(session))  # DEBUG
-
+                print("LOGIN OK")
                 return redirect(url_for("dashboard"))
 
-        return render_template(
-            "login.html",
-        )
+        print("LOGIN FAILED")
+        return render_template("login.html", error="Invalid credentials")
 
     return render_template("login.html")
-
-@app.route("/signup", methods=["GET", "POST"])
-def signup():
-    """User registration"""
-    if "user_id" in session:
-        return redirect(url_for("dashboard"))
-        
-    if request.method == "POST":
-        try:
-            username = request.form.get("username", "").strip()
-            password = request.form.get("password", "")
-            email = request.form.get("email", "").strip()
-
-            if not all([username, password, email]):
-                flash("All fields are required", "danger")
-                return render_template("signup.html")
-
-            # Check if username already exists
-            table = dynamodb.Table(USERS_TABLE)
-            res = table.scan(FilterExpression=Attr("username").eq(username))
-
-            if res["Items"]:
-                flash("Username already exists", "danger")
-                return render_template("signup.html")
-
-            # Create new user
-            table.put_item(Item={
-                "user_id": str(uuid.uuid4()),
-                "username": username,
-                "password": hash_password(password),
-                "email": email,
-                "role": "user",
-                "created_date": datetime.now().isoformat()
-            })
-
-            flash("Account created successfully! Please login.", "success")
-            return redirect(url_for("login"))
-
-        except Exception as e:
-            flash(f"Registration error: {str(e)}", "danger")
-
-    return render_template("signup.html")
-
-
 @app.route("/logout")
 def logout():
     """User logout"""
