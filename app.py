@@ -221,19 +221,17 @@ def update_stock():
 # MEDICINES
 # =================================================
 @app.route("/medicines")
-@login_required
 def medicines():
-    res = medicines_table.scan(
-        FilterExpression=Attr("user_id").eq(session["user_id"])
+    user_id = session["user_id"]
+
+    response = medicines_table.scan(
+        FilterExpression=Attr("user_id").eq(user_id)
     )
-    return render_template("medicines.html", medicines=res.get("Items", []))
 
-
-import uuid
-from decimal import Decimal
-
-from decimal import Decimal
-import uuid
+    return render_template(
+        "medicines.html",
+        medicines=response.get("Items", [])
+    )
 
 @app.route("/add_medicine", methods=["GET", "POST"])
 def add_medicine():
