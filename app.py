@@ -87,7 +87,7 @@ def init_tables():
         except Exception as e:
             print(f"✗ Error creating table {name}: {str(e)}")
 
-    create_table(MEDICINE_TABLE, "medicine_id")
+    create_table(MEDICINES_TABLE, "medicine_id")
     create_table(USERS_TABLE, "user_id")
     create_table(ALERT_LOGS_TABLE, "alert_id")
 
