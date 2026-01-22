@@ -230,23 +230,24 @@ def medicines():
 import uuid
 from decimal import Decimal
 
-@app.route('/add_medicine', methods=['POST'])
-@login_required
+@app.route("/add_medicine", methods=["GET", "POST"])
 def add_medicine():
+    if request.method == "POST":
+        data = request.form
 
-    medicine_name = request.form.get('medicine_name')
-    qty = int(request.form.get('quantity', 0))
-    threshold = int(request.form.get('threshold', 10))
-    email = session['email']
+        medicine = {
+            "id": str(uuid.uuid4()),
+            "name": data.get("name"),
+            "quantity": int(data.get("quantity", 0)),
+            "price": float(data.get("price", 0)),
+            "expiry_date": data.get("expiry_date")
+        }
 
-    # DynamoDB save/update here
+        medicines_table.put_item(Item=medicine)
 
-    if qty < threshold:
-        message = f"{medicine_name} stock is low ({qty})"
-        send_low_stock_email(email, message)
+        return redirect(url_for("medicines"))  # 👈 redirect to list page
 
-    flash("Medicine added successfully")
-    return redirect(url_for('dashboard'))
+    return render_template("add_medicine.html")
 
 from decimal import Decimal
 
