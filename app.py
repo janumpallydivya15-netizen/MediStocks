@@ -298,14 +298,14 @@ def dashboard():
         threshold = int(m.get("threshold_quantity", 0))
         price = float(m.get("price", 0))
 
-        # Total stock value
+        # total stock value
         total_value += qty * price
 
-        # Low stock
+        # low stock check
         if qty <= threshold:
             low_stock += 1
 
-        # Expired items
+        # expired check
         expiry = m.get("expiry_date")
         if expiry:
             try:
@@ -313,7 +313,7 @@ def dashboard():
                 if expiry_date < today:
                     expired += 1
             except ValueError:
-                pass  # bad date format, ignore safely
+                pass
 
     stats = {
         "total_medicines": total_medicines,
@@ -327,7 +327,6 @@ def dashboard():
         stats=stats,
         meds=meds
     )
-
         # Calculate total stock value (if you want to add price field later)
         total_stock = sum(m["current_quantity"] for m in meds)
 
