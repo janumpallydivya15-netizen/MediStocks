@@ -7,14 +7,17 @@
     <form method="POST">
         <div class="mb-3">
             <label class="form-label">Medicine Name</label>
-            <input
-                type="text"
-                class="form-control"
-                name="medicine_name"
-                value="{{ medicine.medicine_id }}"
-                required
-            >
-        </div>
+           <div class="mb-3">
+    <label class="form-label">Medicine Name</label>
+    <input
+        type="text"
+        class="form-control"
+        name="name"                     <!-- ✅ FIX -->
+        value="{{ medicine.name }}"     <!-- ✅ FIX -->
+        required
+    >
+</div>
+
 
         <div class="mb-3">
             <label class="form-label">Quantity</label>
@@ -48,4 +51,5 @@
     </form>
 </div>
 {% endblock %}
+
 
