@@ -13,6 +13,7 @@ import hashlib
 # Flask App Setup
 # --------------------------------------------------
 app = Flask(__name__)
+app.secret_key = "medistock-secret-key"
 app.secret_key = os.environ.get("SECRET_KEY", "medistocks_secret_key_change_in_production")
 
 # --------------------------------------------------
@@ -210,41 +211,37 @@ def index():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    """User login"""
-    if "user_id" in session:
-        return redirect(url_for("dashboard"))
-        
     if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        password = request.form.get("password", "")
+        email = request.form.get("email")
+        password = request.form.get("password")
 
-        if not username or not password:
-            flash("Username and password are required", "danger")
-            return render_template("login.html")
+        table = dynamodb.Table(USERS_TABLE)
 
-        try:
-            table = dynamodb.Table(USERS_TABLE)
-            res = table.scan(FilterExpression=Attr("username").eq(username))
+        response = table.scan(
+            FilterExpression="email = :e",
+            ExpressionAttributeValues={":e": email}
+        )
 
-            if res["Items"]:
-                user = res["Items"][0]
-                hashed_password = hash_password(password)
-                
-                if user["password"] == hashed_password:
-                    session["user_id"] = user["user_id"]
-                    session["username"] = user["username"]
-                    session["role"] = user.get("role", "user")
-                    flash(f"Welcome back, {user['username']}!", "success")
-                    return redirect(url_for("dashboard"))
-                else:
-                    flash("Invalid credentials", "danger")
-            else:
-                flash("Invalid credentials", "danger")
-        except Exception as e:
-            flash(f"Login error: {str(e)}", "danger")
+        users = response.get("Items", [])
+
+        if users:
+            user = users[0]
+
+            if user.get("password") == password:  # (plain text for now)
+                # ✅ SET SESSION
+                session["user_id"] = user["user_id"]
+                session["email"] = user["email"]
+
+                # ✅ REDIRECT TO DASHBOARD
+                return redirect(url_for("dashboard"))
+
+        # ❌ Login failed
+        return render_template(
+            "login.html",
+            error="Invalid email or password"
+        )
 
     return render_template("login.html")
-
 
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
