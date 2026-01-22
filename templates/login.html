@@ -1,54 +1,94 @@
 {% extends "base.html" %}
 
-{% block content %}
-<div class="container mt-5 mb-5">
-    <div class="row justify-content-center">
-        <div class="col-md-5">
-            <div class="card shadow-lg border-0">
-                <div class="card-body p-5">
-                    <div class="text-center mb-4">
-                        <i class="bi bi-shield-lock" style="font-size: 4rem; color: var(--primary-color);"></i>
-                        <h2 class="fw-bold mt-3">Welcome Back</h2>
-                        <p class="text-muted">Login to your MediStock account</p>
-                    </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login | MediStocks</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-                    <form method="POST" action="{{ url_for('login') }}">
-                        <div class="mb-3">
-                            <label for="email" class="form-label fw-semibold">
-                                <i class="bi bi-envelope"></i> Email Address
-                            </label>
-                            <input type="email" class="form-control form-control-lg" id="email" name="email" 
-                                   placeholder="Enter your email" required>
-                        </div>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
 
-                        <div class="mb-4">
-                            <label for="password" class="form-label fw-semibold">
-                                <i class="bi bi-lock"></i> Password
-                            </label>
-                            <input type="password" class="form-control form-control-lg" id="password" name="password" 
-                                   placeholder="Enter your password" required>
-                        </div>
+        .login-box {
+            background: #ffffff;
+            padding: 30px;
+            width: 100%;
+            max-width: 400px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
 
-                        <button type="submit" class="btn btn-primary w-100 btn-lg mb-3">
-                            <i class="bi bi-box-arrow-in-right"></i> Login
-                        </button>
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
 
-                        <div class="text-center">
-                            <p class="text-muted mb-0">
-                                Don't have an account? 
-                                <a href="{{ url_for('signup') }}" class="text-decoration-none fw-semibold">Sign Up</a>
-                            </p>
-                        </div>
-                    </form>
-                </div>
-            </div>
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+        }
 
-            <div class="text-center mt-4">
-                <p class="text-muted">
-                    <i class="bi bi-shield-check"></i> Secure login with encrypted credentials
-                </p>
-            </div>
-        </div>
-    </div>
+        button {
+            width: 100%;
+            padding: 10px;
+            background: #007bff;
+            color: white;
+            border: none;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        .error {
+            color: red;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-box">
+    <h2>Login</h2>
+
+    {% if error %}
+        <div class="error">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('login') }}">
+        <input
+            type="email"
+            name="email"
+            placeholder="Email address"
+            required
+        >
+
+        <input
+            type="password"
+            name="password"
+            placeholder="Password"
+            required
+        >
+
+        <button type="submit">Login</button>
+    </form>
 </div>
-{% endblock %}
+
+</body>
+</html>
