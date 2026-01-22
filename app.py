@@ -13,17 +13,15 @@ app.secret_key = os.urandom(24)
 
 # AWS Service Configuration
 # Uses IAM roles attached to EC2 instance - no credentials needed
-dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
-sns_client = boto3.client('sns', region_name='us-east-1')
+dynamodb = boto3.resource('dynamodb', region_name='ap-south-1')
+sns_client = boto3.client('sns', region_name='ap-south-1')
 
 # DynamoDB Tables
-MEDICINE_TABLE = 'MedicineInventory'
-USERS_TABLE = 'PharmacyUsers'
-ALERT_LOGS_TABLE = 'AlertLogs'
+MEDICINE_TABLE = 'MediStock_Medicines'
+USERS_TABLE = 'MediStock_Users'
 
 # SNS Topic ARN (to be configured)
-SNS_TOPIC_ARN = os.environ.get('SNS_TOPIC_ARN', 'arn:aws:sns:us-east-1:ACCOUNT_ID:MediStockAlerts')
-
+SNS_TOPIC_ARN = os.environ.get('SNS_TOPIC_ARN', arn:aws:sns:ap-south-1:120121146931:MediStockAlerts
 # Helper function to convert float to Decimal for DynamoDB
 def convert_to_decimal(obj):
     if isinstance(obj, float):
