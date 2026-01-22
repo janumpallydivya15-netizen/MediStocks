@@ -254,14 +254,18 @@ def add_medicine():
     if request.method == "POST":
         data = request.form
 
-        medicine = {
-            "medicine_id": str(uuid.uuid4()),  # ✅ MUST MATCH TABLE KEY
-            "user_id": session["user_id"]
-            "name": data.get("name"),
-            "quantity": int(data.get("quantity", 0)),
-            "price": Decimal(data.get("price", "0")),
-            "expiry_date": data.get("expiry_date")
-        }
+       table.put_item(
+    Item={
+        "medicine_id": str(uuid.uuid4()),
+        "user_id": session["user_id"],
+        "name": data.get("name"),
+        "price": Decimal(str(data.get("price", "0"))),
+        "quantity": int(data.get("quantity", 0)),
+        "threshold": int(data.get("threshold", 10)),
+        "expiry_date": data.get("expiry_date")
+    }
+)
+
 
         medicines_table.put_item(Item=medicine)
 
