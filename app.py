@@ -249,29 +249,26 @@ def medicines():
         medicines=response.get("Items", [])
     )
 
-@app.route("/add_medicine", methods=["GET", "POST"])
+@app.route("/add-medicine", methods=["POST"])
 def add_medicine():
-    if request.method == "POST":
-        data = request.form
+    if "user_id" not in session:
+        return redirect(url_for("login"))
 
-       table.put_item(
-    Item={
-        "medicine_id": str(uuid.uuid4()),
-        "user_id": session["user_id"],
-        "name": data.get("name"),
-        "price": Decimal(str(data.get("price", "0"))),
-        "quantity": int(data.get("quantity", 0)),
-        "threshold": int(data.get("threshold", 10)),
-        "expiry_date": data.get("expiry_date")
-    }
-)
+    data = request.form
 
+    table.put_item(
+        Item={
+            "medicine_id": str(uuid.uuid4()),
+            "user_id": session["user_id"],
+            "name": data.get("name"),
+            "price": Decimal(str(data.get("price", "0"))),
+            "quantity": int(data.get("quantity", 0)),
+            "threshold": int(data.get("threshold", 10)),
+            "expiry_date": data.get("expiry_date")
+        }
+    )
 
-        medicines_table.put_item(Item=medicine)
-
-        return redirect(url_for("medicines"))
-
-    return render_template("add_medicine.html")
+    return redirect(url_for("dashboard"))
 from decimal import Decimal
 
 @app.route("/edit_medicine/<medicine_id>", methods=["GET", "POST"])
