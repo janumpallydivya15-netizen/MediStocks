@@ -9,7 +9,8 @@
                 <p class="lead mb-4">Smart Medicine Inventory Management System</p>
                 <p class="fs-5 mb-4">Efficiently manage your medical inventory with real-time tracking, automated alerts, and comprehensive reporting.</p>
                 <div class="d-flex gap-3">
-                    <a href="{{ url_for('signup') }}" class="btn btn-light btn-lg px-4">
+                    <a href="{{ url_for('signup_user') }}" class="btn btn-light btn-lg px-4">
+
                         <i class="bi bi-person-plus"></i> Get Started
                     </a>
                     <a href="{{ url_for('login') }}" class="btn btn-outline-light btn-lg px-4">
@@ -108,4 +109,5 @@
         <i class="bi bi-rocket-takeoff"></i> Start Free Trial
     </a>
 </div>
+
 {% endblock %}
