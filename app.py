@@ -256,7 +256,8 @@ def add_medicine_page():
 
     return render_template("add_medicine.html")
 
-  @app.route("/add-medicine", methods=["POST"])
+
+@app.route("/add-medicine", methods=["POST"])
 def add_medicine():
     if "user_id" not in session:
         return redirect(url_for("login"))
@@ -276,7 +277,7 @@ def add_medicine():
     )
 
     return redirect(url_for("dashboard"))
-      
+
 @app.route("/edit_medicine/<medicine_id>", methods=["GET", "POST"])
 def edit_medicine(medicine_id):
     if request.method == "POST":
