@@ -16,6 +16,8 @@ dynamodb = boto3.resource(
 
 MEDICINE_TABLE = dynamodb.Table("MediStock_Medicines")
 USER_TABLE = dynamodb.Table("MediStock_Users")
+print("MEDICINE_TABLE OBJECT:", MEDICINE_TABLE)
+
 # ==================================================================
 # ================= SNS CONFIG (FIXED) =================
 SNS_TOPIC_ARN = "arn:aws:sns:ap-south-1:120121146931:MediStockAlerts"
