@@ -181,24 +181,6 @@ def dashboard():
 total_value = sum(
     int(item.get('quantity', 0)) * float(item.get('price', 0))
     for item in items)
-@app.route("/update_stock", methods=["POST"])
-def update_stock():
-    data = request.json
-    med_id = data["id"]
-    qty = int(data["quantity"])
-
-    med = get_medicine_by_id(med_id)
-
-    if qty < 10:
-        send_low_stock_email(med)
-
-    return jsonify({"status": "ok"})
-
-        expiry_str = med.get("expiry_date")
-        if expiry_str:
-            expiry_date = datetime.strptime(expiry_str, "%Y-%m-%d").date()
-            if expiry_date < today:
-                expired += 1
 
     # 👇 THIS is what your template expects
     stats = {
@@ -211,6 +193,30 @@ def update_stock():
     print("STATS DEBUG:", stats)  # temporary debug
 
     return render_template("dashboard.html", stats=stats)
+@app.route("/update_stock", methods=["POST"])
+def update_stock():
+    data = request.json
+
+    med_id = data.get("id")
+    qty = int(data.get("quantity", 0))
+
+    med = get_medicine_by_id(med_id)
+    if not med:
+        return jsonify({"error": "Medicine not found"}), 404
+
+    expiry_str = med.get("expiry_date")
+
+    # Low stock alert
+    if qty < 10:
+        send_low_stock_email(med)
+
+    # Expiry alert
+    if expiry_str:
+        expiry_date = datetime.strptime(expiry_str, "%Y-%m-%d").date()
+        if expiry_date <= date.today() + timedelta(days=30):
+            send_expiry_alert_email(med)
+
+    return jsonify({"status": "updated"})
 
 # =================================================
 # MEDICINES
