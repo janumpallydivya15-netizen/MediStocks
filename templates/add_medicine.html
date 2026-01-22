@@ -1,8 +1,22 @@
-<form action="/add-medicine" method="POST">
-    <input type="text" name="name" placeholder="Medicine name" required>
-    <input type="number" name="price" placeholder="Price" required>
-    <input type="number" name="quantity" placeholder="Quantity" required>
-    <input type="number" name="threshold" placeholder="Threshold">
-    <input type="date" name="expiry_date">
-    <button type="submit">Add Medicine</button>
-</form>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Medicine</title>
+</head>
+<body>
+    <h2>Add Medicine</h2>
+
+    <form action="/add-medicine" method="POST">
+        <input type="text" name="name" placeholder="Medicine Name" required><br><br>
+        <input type="number" name="price" placeholder="Price" required><br><br>
+        <input type="number" name="quantity" placeholder="Quantity" required><br><br>
+        <input type="number" name="threshold" placeholder="Low Stock Threshold"><br><br>
+        <input type="date" name="expiry_date"><br><br>
+
+        <button type="submit">Save Medicine</button>
+    </form>
+
+    <br>
+    <a href="/dashboard">Back to Dashboard</a>
+</body>
+</html>
