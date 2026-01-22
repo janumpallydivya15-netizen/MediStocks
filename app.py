@@ -284,7 +284,7 @@ def edit_medicine(medicine_id):
             send_low_stock_email(session['email'], message)
 
         flash("Medicine updated successfully")
-        return redirect(url_for('view_medicines'))
+        return redirect(url_for('medicines'))
 
     # GET request – load existing data
     response = medicines_table.get_item(
