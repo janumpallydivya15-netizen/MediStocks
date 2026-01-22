@@ -239,15 +239,16 @@ def add_medicine():
             "id": str(uuid.uuid4()),
             "name": data.get("name"),
             "quantity": int(data.get("quantity", 0)),
-            "price": float(data.get("price", 0)),
+            "price": Decimal(data.get("price", "0")),  # ✅ FIXED
             "expiry_date": data.get("expiry_date")
         }
 
         medicines_table.put_item(Item=medicine)
 
-        return redirect(url_for("medicines"))  # 👈 redirect to list page
+        return redirect(url_for("medicines"))
 
     return render_template("add_medicine.html")
+
 
 from decimal import Decimal
 
