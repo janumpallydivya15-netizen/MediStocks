@@ -249,14 +249,21 @@ def medicines():
         medicines=response.get("Items", [])
     )
 
-@app.route("/add-medicine", methods=["GET", "POST"])
+@app.route("/add-medicine", methods=["GET"])
+def add_medicine_page():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    return render_template("add_medicine.html")
+
+  @app.route("/add-medicine", methods=["POST"])
 def add_medicine():
-    if request.method == "GET":
-        return redirect(url_for("dashboard"))
+    if "user_id" not in session:
+        return redirect(url_for("login"))
 
     data = request.form
 
-    table.put_item(
+    MEDICINE_TABLE.put_item(
         Item={
             "medicine_id": str(uuid.uuid4()),
             "user_id": session["user_id"],
@@ -269,8 +276,7 @@ def add_medicine():
     )
 
     return redirect(url_for("dashboard"))
-from decimal import Decimal
-
+      
 @app.route("/edit_medicine/<medicine_id>", methods=["GET", "POST"])
 def edit_medicine(medicine_id):
     if request.method == "POST":
