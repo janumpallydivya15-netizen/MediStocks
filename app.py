@@ -279,53 +279,54 @@ def logout():
 # --------------------------------------------------
 # Routes - Dashboard
 # --------------------------------------------------
+from datetime import datetime
+
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    try:
-        meds = get_all_medicines()
+    meds = get_all_medicines()
 
-        total = len(meds)
-        low_stock = sum(
-            1 for m in meds
-            if int(m.get("current_quantity", 0)) <= int(m.get("threshold_quantity", 0))
-        )
+    total_medicines = len(meds)
+    low_stock = 0
+    expired = 0
+    total_value = 0.0
 
-        expired = sum(
-            1 for m in meds
-            if m.get("expiry_date") and m["expiry_date"] < datetime.today().strftime("%Y-%m-%d")
-        )
+    today = datetime.today().date()
 
-        stats = {
-            "total_medicines": total,
-            "low_stock": low_stock,
-            "expired": expired
-        }
+    for m in meds:
+        qty = int(m.get("current_quantity", 0))
+        threshold = int(m.get("threshold_quantity", 0))
+        price = float(m.get("price", 0))
 
-        return render_template(
-            "dashboard.html",
-            stats=stats,
-            meds=meds
-        )
+        # Total stock value
+        total_value += qty * price
 
-    except Exception as e:
-        print("Dashboard error:", e)
+        # Low stock
+        if qty <= threshold:
+            low_stock += 1
 
-        return render_template(
-            "dashboard.html",
-            stats={
-                "total_medicines": 0,
-                "low_stock": 0,
-                "expired": 0
-            },
-            meds=[]
-        )
+        # Expired items
+        expiry = m.get("expiry_date")
+        if expiry:
+            try:
+                expiry_date = datetime.strptime(expiry, "%Y-%m-%d").date()
+                if expiry_date < today:
+                    expired += 1
+            except ValueError:
+                pass  # bad date format, ignore safely
 
-        # Get recent alerts
-        alerts_table = dynamodb.Table(ALERT_LOGS_TABLE)
-        recent_alerts = decimal_to_float(alerts_table.scan().get("Items", []))
-        recent_alerts.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
-        recent_alerts = recent_alerts[:5]  # Last 5 alerts
+    stats = {
+        "total_medicines": total_medicines,
+        "low_stock": low_stock,
+        "expired": expired,
+        "total_value": round(total_value, 2)
+    }
+
+    return render_template(
+        "dashboard.html",
+        stats=stats,
+        meds=meds
+    )
 
         # Calculate total stock value (if you want to add price field later)
         total_stock = sum(m["current_quantity"] for m in meds)
