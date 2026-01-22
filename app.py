@@ -185,17 +185,17 @@ def dashboard():
 
         if qty < threshold:
             low_stock += 1
-            # 🔍 DEBUG PRINTS — ADD HERE
-    print("MEDICINES:", medicines)
-    print("TOTAL VALUE:", total_value)
-    print("LOW STOCK:", low_stock)
-    print("EXPIRED:", expired)
-
+           
         expiry = med.get("expiry_date")
         if expiry:
             expiry_date = datetime.strptime(expiry, "%Y-%m-%d").date()
             if expiry_date < today:
                 expired += 1
+                 # 🔍 DEBUG PRINTS — ADD HERE
+    print("MEDICINES:", medicines)
+    print("TOTAL VALUE:", total_value)
+    print("LOW STOCK:", low_stock)
+    print("EXPIRED:", expired)
 
     return render_template(
         "dashboard.html",
