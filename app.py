@@ -1,17 +1,19 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash, session
 from functools import wraps
 import boto3
-from boto3.dynamodb.conditions import Attr
+from boto3.dynamodb.conditions import Attr, Key
+from botocore.exceptions import ClientError
 from decimal import Decimal
 from datetime import datetime, timedelta
 import uuid
 import os
+import hashlib
 
 # --------------------------------------------------
 # Flask App Setup
 # --------------------------------------------------
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "medistocks_secret_key")
+app.secret_key = os.environ.get("SECRET_KEY", "medistocks_secret_key_change_in_production")
 
 # --------------------------------------------------
 # AWS Configuration (EC2 IAM Role)
@@ -40,6 +42,7 @@ SNS_TOPIC_ARN = os.environ.get(
 # Utility Functions
 # --------------------------------------------------
 def decimal_to_float(obj):
+    """Convert DynamoDB Decimal types to float for JSON serialization"""
     if isinstance(obj, Decimal):
         return float(obj)
     if isinstance(obj, dict):
@@ -49,7 +52,13 @@ def decimal_to_float(obj):
     return obj
 
 
+def hash_password(password):
+    """Hash password using SHA-256"""
+    return hashlib.sha256(password.encode()).hexdigest()
+
+
 def login_required(f):
+    """Decorator to protect routes that require authentication"""
     @wraps(f)
     def decorated(*args, **kwargs):
         if "user_id" not in session:
@@ -63,6 +72,7 @@ def login_required(f):
 # Initialize DynamoDB Tables
 # --------------------------------------------------
 def init_tables():
+    """Create DynamoDB tables if they don't exist"""
     client = dynamodb.meta.client
 
     def create_table(name, key):
@@ -73,170 +83,647 @@ def init_tables():
                 AttributeDefinitions=[{"AttributeName": key, "AttributeType": "S"}],
                 BillingMode="PAY_PER_REQUEST"
             ).wait_until_exists()
-            print(f"Created table: {name}")
+            print(f"✓ Created table: {name}")
         except client.exceptions.ResourceInUseException:
-            print(f"Table already exists: {name}")
+            print(f"✓ Table already exists: {name}")
+        except Exception as e:
+            print(f"✗ Error creating table {name}: {str(e)}")
 
     create_table(MEDICINE_TABLE, "medicine_id")
     create_table(USERS_TABLE, "user_id")
     create_table(ALERT_LOGS_TABLE, "alert_id")
 
 
+def init_default_user():
+    """Create default admin user if no users exist"""
+    try:
+        table = dynamodb.Table(USERS_TABLE)
+        response = table.scan(Limit=1)
+        
+        if not response.get("Items"):
+            table.put_item(Item={
+                "user_id": str(uuid.uuid4()),
+                "username": "admin",
+                "password": hash_password("admin123"),
+                "email": "admin@medistock.com",
+                "role": "admin",
+                "created_date": datetime.now().isoformat()
+            })
+            print("✓ Default admin user created (username: admin, password: admin123)")
+    except Exception as e:
+        print(f"✗ Error creating default user: {str(e)}")
+
+
 # --------------------------------------------------
 # SNS Alert Logic
 # --------------------------------------------------
 def send_stock_alert(medicine, current_qty, threshold):
-    message = (
-        f"⚠️ MEDISTOCK LOW STOCK ALERT\n\n"
-        f"Medicine: {medicine['medicine_name']}\n"
-        f"Current Stock: {current_qty}\n"
-        f"Threshold: {threshold}\n"
-        f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-    )
+    """Send low stock alert via SNS and log the alert"""
+    try:
+        message = (
+            f"⚠️ MEDISTOCK LOW STOCK ALERT\n\n"
+            f"Medicine: {medicine['medicine_name']}\n"
+            f"Category: {medicine.get('category', 'N/A')}\n"
+            f"Current Stock: {current_qty}\n"
+            f"Threshold: {threshold}\n"
+            f"Action Required: Please restock immediately\n"
+            f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        )
 
-    sns_client.publish(
-        TopicArn=SNS_TOPIC_ARN,
-        Subject="MediStock Low Inventory Alert",
-        Message=message
-    )
+        sns_client.publish(
+            TopicArn=SNS_TOPIC_ARN,
+            Subject="MediStock Low Inventory Alert",
+            Message=message
+        )
 
-    log_alert(medicine, current_qty, threshold)
+        log_alert(medicine, current_qty, threshold)
+        print(f"✓ Alert sent for {medicine['medicine_name']}")
+    except Exception as e:
+        print(f"✗ Error sending alert: {str(e)}")
 
 
 def log_alert(medicine, current_qty, threshold):
-    table = dynamodb.Table(ALERT_LOGS_TABLE)
-    table.put_item(Item={
-        "alert_id": str(uuid.uuid4()),
-        "medicine_id": medicine["medicine_id"],
-        "medicine_name": medicine["medicine_name"],
-        "current_stock": Decimal(str(current_qty)),
-        "threshold": Decimal(str(threshold)),
-        "timestamp": datetime.now().isoformat(),
-        "status": "SENT"
-    })
+    """Log alert to DynamoDB"""
+    try:
+        table = dynamodb.Table(ALERT_LOGS_TABLE)
+        table.put_item(Item={
+            "alert_id": str(uuid.uuid4()),
+            "medicine_id": medicine["medicine_id"],
+            "medicine_name": medicine["medicine_name"],
+            "category": medicine.get("category", "N/A"),
+            "current_stock": Decimal(str(current_qty)),
+            "threshold": Decimal(str(threshold)),
+            "timestamp": datetime.now().isoformat(),
+            "status": "SENT",
+            "severity": "HIGH" if current_qty == 0 else "MEDIUM"
+        })
+    except Exception as e:
+        print(f"✗ Error logging alert: {str(e)}")
 
 
 # --------------------------------------------------
-# Routes
+# Routes - Authentication
 # --------------------------------------------------
 @app.route("/")
 def index():
+    """Landing page"""
+    if "user_id" in session:
+        return redirect(url_for("dashboard"))
     return render_template("index.html")
 
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    """User login"""
+    if "user_id" in session:
+        return redirect(url_for("dashboard"))
+        
     if request.method == "POST":
-        username = request.form.get("username")
-        password = request.form.get("password")
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
 
-        table = dynamodb.Table(USERS_TABLE)
-        res = table.scan(FilterExpression=Attr("username").eq(username))
+        if not username or not password:
+            flash("Username and password are required", "danger")
+            return render_template("login.html")
 
-        if res["Items"] and res["Items"][0]["password"] == password:
-            user = res["Items"][0]
-            session["user_id"] = user["user_id"]
-            session["username"] = user["username"]
-            flash("Login successful", "success")
-            return redirect(url_for("dashboard"))
+        try:
+            table = dynamodb.Table(USERS_TABLE)
+            res = table.scan(FilterExpression=Attr("username").eq(username))
 
-        flash("Invalid credentials", "danger")
+            if res["Items"]:
+                user = res["Items"][0]
+                hashed_password = hash_password(password)
+                
+                if user["password"] == hashed_password:
+                    session["user_id"] = user["user_id"]
+                    session["username"] = user["username"]
+                    session["role"] = user.get("role", "user")
+                    flash(f"Welcome back, {user['username']}!", "success")
+                    return redirect(url_for("dashboard"))
+                else:
+                    flash("Invalid credentials", "danger")
+            else:
+                flash("Invalid credentials", "danger")
+        except Exception as e:
+            flash(f"Login error: {str(e)}", "danger")
 
     return render_template("login.html")
 
 
+@app.route("/signup", methods=["GET", "POST"])
+def signup():
+    """User registration"""
+    if "user_id" in session:
+        return redirect(url_for("dashboard"))
+        
+    if request.method == "POST":
+        try:
+            username = request.form.get("username", "").strip()
+            password = request.form.get("password", "")
+            email = request.form.get("email", "").strip()
+
+            if not all([username, password, email]):
+                flash("All fields are required", "danger")
+                return render_template("signup.html")
+
+            # Check if username already exists
+            table = dynamodb.Table(USERS_TABLE)
+            res = table.scan(FilterExpression=Attr("username").eq(username))
+
+            if res["Items"]:
+                flash("Username already exists", "danger")
+                return render_template("signup.html")
+
+            # Create new user
+            table.put_item(Item={
+                "user_id": str(uuid.uuid4()),
+                "username": username,
+                "password": hash_password(password),
+                "email": email,
+                "role": "user",
+                "created_date": datetime.now().isoformat()
+            })
+
+            flash("Account created successfully! Please login.", "success")
+            return redirect(url_for("login"))
+
+        except Exception as e:
+            flash(f"Registration error: {str(e)}", "danger")
+
+    return render_template("signup.html")
+
+
 @app.route("/logout")
 def logout():
+    """User logout"""
+    username = session.get("username", "User")
     session.clear()
-    flash("Logged out", "info")
+    flash(f"Goodbye, {username}!", "info")
     return redirect(url_for("login"))
 
 
+# --------------------------------------------------
+# Routes - Dashboard
+# --------------------------------------------------
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    table = dynamodb.Table(MEDICINE_TABLE)
-    meds = decimal_to_float(table.scan().get("Items", []))
+    """Main dashboard with statistics"""
+    try:
+        table = dynamodb.Table(MEDICINE_TABLE)
+        meds = decimal_to_float(table.scan().get("Items", []))
 
-    low_stock = sum(1 for m in meds if m["current_quantity"] <= m["threshold_quantity"])
-    expired = sum(1 for m in meds if datetime.fromisoformat(m["expiry_date"]) < datetime.now())
+        # Calculate statistics
+        total_medicines = len(meds)
+        low_stock = sum(1 for m in meds if m["current_quantity"] <= m["threshold_quantity"])
+        out_of_stock = sum(1 for m in meds if m["current_quantity"] == 0)
+        
+        # Check for expired medicines
+        expired = 0
+        expiring_soon = 0
+        today = datetime.now()
+        
+        for m in meds:
+            try:
+                exp_date = datetime.fromisoformat(m["expiry_date"])
+                if exp_date < today:
+                    expired += 1
+                elif exp_date < today + timedelta(days=30):
+                    expiring_soon += 1
+            except:
+                pass
 
-    return render_template(
-        "dashboard.html",
-        total=len(meds),
-        low_stock=low_stock,
-        expired=expired,
-        username=session.get("username")
-    )
+        # Get recent alerts
+        alerts_table = dynamodb.Table(ALERT_LOGS_TABLE)
+        recent_alerts = decimal_to_float(alerts_table.scan().get("Items", []))
+        recent_alerts.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+        recent_alerts = recent_alerts[:5]  # Last 5 alerts
+
+        # Calculate total stock value (if you want to add price field later)
+        total_stock = sum(m["current_quantity"] for m in meds)
+
+        return render_template(
+            "dashboard.html",
+            total=total_medicines,
+            low_stock=low_stock,
+            out_of_stock=out_of_stock,
+            expired=expired,
+            expiring_soon=expiring_soon,
+            total_stock=total_stock,
+            recent_alerts=recent_alerts,
+            username=session.get("username"),
+            role=session.get("role", "user")
+        )
+    except Exception as e:
+        flash(f"Error loading dashboard: {str(e)}", "danger")
+        return render_template("dashboard.html", total=0, low_stock=0, expired=0, 
+                             username=session.get("username"), role=session.get("role", "user"))
+
+
+# --------------------------------------------------
+# Routes - Medicines/Inventory
+# --------------------------------------------------
+@app.route("/medicines")
+@login_required
+def medicines():
+    """View all medicines in inventory (same as inventory)"""
+    return redirect(url_for("inventory"))
 
 
 @app.route("/inventory")
 @login_required
 def inventory():
-    table = dynamodb.Table(MEDICINE_TABLE)
-    medicines = decimal_to_float(table.scan().get("Items", []))
-    medicines.sort(key=lambda x: x["medicine_name"])
-    return render_template("inventory.html", medicines=medicines)
+    """View all medicines in inventory"""
+    try:
+        table = dynamodb.Table(MEDICINE_TABLE)
+        medicines = decimal_to_float(table.scan().get("Items", []))
+        medicines.sort(key=lambda x: x.get("medicine_name", ""))
+        
+        # Add status to each medicine
+        today = datetime.now()
+        for med in medicines:
+            # Stock status
+            if med["current_quantity"] == 0:
+                med["stock_status"] = "Out of Stock"
+                med["stock_class"] = "danger"
+            elif med["current_quantity"] <= med["threshold_quantity"]:
+                med["stock_status"] = "Low Stock"
+                med["stock_class"] = "warning"
+            else:
+                med["stock_status"] = "In Stock"
+                med["stock_class"] = "success"
+            
+            # Expiry status
+            try:
+                exp_date = datetime.fromisoformat(med["expiry_date"])
+                if exp_date < today:
+                    med["expiry_status"] = "Expired"
+                    med["expiry_class"] = "danger"
+                elif exp_date < today + timedelta(days=30):
+                    med["expiry_status"] = "Expiring Soon"
+                    med["expiry_class"] = "warning"
+                else:
+                    med["expiry_status"] = "Valid"
+                    med["expiry_class"] = "success"
+            except:
+                med["expiry_status"] = "Unknown"
+                med["expiry_class"] = "secondary"
+        
+        return render_template("medicines.html", medicines=medicines, username=session.get("username"))
+    except Exception as e:
+        flash(f"Error loading inventory: {str(e)}", "danger")
+        return render_template("medicines.html", medicines=[], username=session.get("username"))
 
 
 @app.route("/add_medicine", methods=["GET", "POST"])
 @login_required
 def add_medicine():
+    """Add new medicine to inventory"""
     if request.method == "POST":
-        table = dynamodb.Table(MEDICINE_TABLE)
+        try:
+            table = dynamodb.Table(MEDICINE_TABLE)
 
-        item = {
-            "medicine_id": str(uuid.uuid4()),
-            "medicine_name": request.form["medicine_name"],
-            "category": request.form["category"],
-            "current_quantity": Decimal(request.form["current_quantity"]),
-            "threshold_quantity": Decimal(request.form["threshold_quantity"]),
-            "expiry_date": request.form["expiry_date"],
-            "added_by": session["username"],
-            "added_date": datetime.now().isoformat()
-        }
+            # Validate inputs
+            medicine_name = request.form.get("medicine_name", "").strip()
+            category = request.form.get("category", "").strip()
+            current_quantity = request.form.get("current_quantity", "0")
+            threshold_quantity = request.form.get("threshold_quantity", "0")
+            expiry_date = request.form.get("expiry_date", "")
+            batch_number = request.form.get("batch_number", "").strip()
+            manufacturer = request.form.get("manufacturer", "").strip()
+            unit_price = request.form.get("unit_price", "0")
 
-        table.put_item(Item=item)
-        flash("Medicine added successfully", "success")
-        return redirect(url_for("inventory"))
+            if not all([medicine_name, category, expiry_date]):
+                flash("Medicine name, category, and expiry date are required", "danger")
+                return render_template("add_medicine.html")
+
+            item = {
+                "medicine_id": str(uuid.uuid4()),
+                "medicine_name": medicine_name,
+                "category": category,
+                "current_quantity": Decimal(current_quantity),
+                "threshold_quantity": Decimal(threshold_quantity),
+                "expiry_date": expiry_date,
+                "batch_number": batch_number if batch_number else "N/A",
+                "manufacturer": manufacturer if manufacturer else "N/A",
+                "unit_price": Decimal(unit_price) if unit_price else Decimal("0"),
+                "added_by": session.get("username", "Unknown"),
+                "added_date": datetime.now().isoformat()
+            }
+
+            table.put_item(Item=item)
+            flash(f"Medicine '{medicine_name}' added successfully", "success")
+            return redirect(url_for("inventory"))
+
+        except ValueError as e:
+            flash("Invalid quantity or price values. Please enter valid numbers.", "danger")
+        except Exception as e:
+            flash(f"Error adding medicine: {str(e)}", "danger")
 
     return render_template("add_medicine.html")
+
+
+@app.route("/edit_medicine/<medicine_id>", methods=["GET", "POST"])
+@login_required
+def edit_medicine(medicine_id):
+    """Edit existing medicine details"""
+    try:
+        table = dynamodb.Table(MEDICINE_TABLE)
+        
+        if request.method == "POST":
+            # Update medicine
+            medicine_name = request.form.get("medicine_name", "").strip()
+            category = request.form.get("category", "").strip()
+            current_quantity = request.form.get("current_quantity", "0")
+            threshold_quantity = request.form.get("threshold_quantity", "0")
+            expiry_date = request.form.get("expiry_date", "")
+            batch_number = request.form.get("batch_number", "").strip()
+            manufacturer = request.form.get("manufacturer", "").strip()
+            unit_price = request.form.get("unit_price", "0")
+
+            if not all([medicine_name, category, expiry_date]):
+                flash("Medicine name, category, and expiry date are required", "danger")
+                return redirect(url_for("edit_medicine", medicine_id=medicine_id))
+
+            table.update_item(
+                Key={"medicine_id": medicine_id},
+                UpdateExpression="""SET medicine_name = :name, category = :cat, 
+                                   current_quantity = :curr, threshold_quantity = :thresh,
+                                   expiry_date = :exp, batch_number = :batch,
+                                   manufacturer = :mfr, unit_price = :price""",
+                ExpressionAttributeValues={
+                    ":name": medicine_name,
+                    ":cat": category,
+                    ":curr": Decimal(current_quantity),
+                    ":thresh": Decimal(threshold_quantity),
+                    ":exp": expiry_date,
+                    ":batch": batch_number if batch_number else "N/A",
+                    ":mfr": manufacturer if manufacturer else "N/A",
+                    ":price": Decimal(unit_price) if unit_price else Decimal("0")
+                }
+            )
+
+            flash(f"Medicine '{medicine_name}' updated successfully", "success")
+            return redirect(url_for("inventory"))
+        
+        # GET request - fetch medicine details
+        response = table.get_item(Key={"medicine_id": medicine_id})
+        
+        if "Item" not in response:
+            flash("Medicine not found", "danger")
+            return redirect(url_for("inventory"))
+        
+        medicine = decimal_to_float(response["Item"])
+        return render_template("edit_medicine.html", medicine=medicine)
+        
+    except Exception as e:
+        flash(f"Error editing medicine: {str(e)}", "danger")
+        return redirect(url_for("inventory"))
 
 
 @app.route("/update_stock/<medicine_id>", methods=["POST"])
 @login_required
 def update_stock(medicine_id):
-    table = dynamodb.Table(MEDICINE_TABLE)
-    qty = Decimal(request.form["quantity"])
+    """Update stock quantity for a medicine"""
+    try:
+        table = dynamodb.Table(MEDICINE_TABLE)
+        qty_change = Decimal(request.form.get("quantity", "0"))
+        action = request.form.get("action", "add")  # add or subtract
 
-    med = table.get_item(Key={"medicine_id": medicine_id})["Item"]
-    new_qty = med["current_quantity"] + qty
+        # Get current medicine details
+        response = table.get_item(Key={"medicine_id": medicine_id})
+        
+        if "Item" not in response:
+            flash("Medicine not found", "danger")
+            return redirect(url_for("inventory"))
 
-    table.update_item(
-        Key={"medicine_id": medicine_id},
-        UpdateExpression="SET current_quantity=:q",
-        ExpressionAttributeValues={":q": new_qty}
-    )
+        med = response["Item"]
+        
+        if action == "subtract":
+            new_qty = med["current_quantity"] - abs(qty_change)
+        else:
+            new_qty = med["current_quantity"] + abs(qty_change)
 
-    if new_qty <= med["threshold_quantity"]:
-        send_stock_alert(med, float(new_qty), float(med["threshold_quantity"]))
+        # Prevent negative stock
+        if new_qty < 0:
+            flash("Stock cannot be negative", "danger")
+            return redirect(url_for("inventory"))
 
-    flash("Stock updated", "success")
+        # Update stock
+        table.update_item(
+            Key={"medicine_id": medicine_id},
+            UpdateExpression="SET current_quantity = :q",
+            ExpressionAttributeValues={":q": new_qty}
+        )
+
+        # Check if alert needs to be sent
+        if new_qty <= med["threshold_quantity"]:
+            send_stock_alert(med, float(new_qty), float(med["threshold_quantity"]))
+            flash(f"Stock updated. Low stock alert sent for {med['medicine_name']}", "warning")
+        else:
+            flash("Stock updated successfully", "success")
+
+    except ValueError:
+        flash("Invalid quantity value", "danger")
+    except Exception as e:
+        flash(f"Error updating stock: {str(e)}", "danger")
+
     return redirect(url_for("inventory"))
+
+
+@app.route("/delete_medicine/<medicine_id>", methods=["POST"])
+@login_required
+def delete_medicine(medicine_id):
+    """Delete a medicine from inventory"""
+    try:
+        table = dynamodb.Table(MEDICINE_TABLE)
+        
+        # Get medicine name before deleting
+        response = table.get_item(Key={"medicine_id": medicine_id})
+        medicine_name = response.get("Item", {}).get("medicine_name", "Medicine")
+        
+        table.delete_item(Key={"medicine_id": medicine_id})
+        flash(f"{medicine_name} deleted successfully", "success")
+    except Exception as e:
+        flash(f"Error deleting medicine: {str(e)}", "danger")
+    
+    return redirect(url_for("inventory"))
+
+
+# --------------------------------------------------
+# Routes - Alerts
+# --------------------------------------------------
+@app.route("/alerts")
+@login_required
+def alerts():
+    """View all alert logs (same as alert_logs)"""
+    return redirect(url_for("alert_logs"))
 
 
 @app.route("/alert_logs")
 @login_required
 def alert_logs():
-    table = dynamodb.Table(ALERT_LOGS_TABLE)
-    alerts = decimal_to_float(table.scan().get("Items", []))
-    alerts.sort(key=lambda x: x["timestamp"], reverse=True)
-    return render_template("alert_logs.html", alerts=alerts)
+    """View all alert logs"""
+    try:
+        table = dynamodb.Table(ALERT_LOGS_TABLE)
+        alerts = decimal_to_float(table.scan().get("Items", []))
+        alerts.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+        
+        # Format timestamps for display
+        for alert in alerts:
+            try:
+                dt = datetime.fromisoformat(alert["timestamp"])
+                alert["formatted_time"] = dt.strftime("%Y-%m-%d %H:%M:%S")
+            except:
+                alert["formatted_time"] = alert.get("timestamp", "Unknown")
+        
+        return render_template("alerts.html", alerts=alerts, username=session.get("username"))
+    except Exception as e:
+        flash(f"Error loading alert logs: {str(e)}", "danger")
+        return render_template("alerts.html", alerts=[], username=session.get("username"))
+
+
+# --------------------------------------------------
+# Routes - Reports
+# --------------------------------------------------
+@app.route("/reports")
+@login_required
+def reports():
+    """Generate inventory reports"""
+    try:
+        table = dynamodb.Table(MEDICINE_TABLE)
+        medicines = decimal_to_float(table.scan().get("Items", []))
+        
+        # Category-wise stock summary
+        category_summary = {}
+        for med in medicines:
+            cat = med.get("category", "Uncategorized")
+            if cat not in category_summary:
+                category_summary[cat] = {
+                    "total_items": 0,
+                    "total_quantity": 0,
+                    "low_stock_items": 0
+                }
+            
+            category_summary[cat]["total_items"] += 1
+            category_summary[cat]["total_quantity"] += med["current_quantity"]
+            if med["current_quantity"] <= med["threshold_quantity"]:
+                category_summary[cat]["low_stock_items"] += 1
+        
+        # Expired and expiring medicines
+        today = datetime.now()
+        expired_medicines = []
+        expiring_medicines = []
+        
+        for med in medicines:
+            try:
+                exp_date = datetime.fromisoformat(med["expiry_date"])
+                if exp_date < today:
+                    expired_medicines.append(med)
+                elif exp_date < today + timedelta(days=30):
+                    expiring_medicines.append(med)
+            except:
+                pass
+        
+        # Low stock medicines
+        low_stock_medicines = [m for m in medicines if m["current_quantity"] <= m["threshold_quantity"]]
+        
+        return render_template(
+            "reports.html",
+            category_summary=category_summary,
+            expired_medicines=expired_medicines,
+            expiring_medicines=expiring_medicines,
+            low_stock_medicines=low_stock_medicines,
+            total_medicines=len(medicines),
+            username=session.get("username")
+        )
+    except Exception as e:
+        flash(f"Error generating reports: {str(e)}", "danger")
+        return render_template("reports.html", category_summary={}, expired_medicines=[], 
+                             expiring_medicines=[], low_stock_medicines=[], username=session.get("username"))
+
+
+# --------------------------------------------------
+# API Routes
+# --------------------------------------------------
+@app.route("/api/stats")
+@login_required
+def api_stats():
+    """API endpoint for dashboard statistics"""
+    try:
+        table = dynamodb.Table(MEDICINE_TABLE)
+        meds = decimal_to_float(table.scan().get("Items", []))
+
+        low_stock = sum(1 for m in meds if m["current_quantity"] <= m["threshold_quantity"])
+        out_of_stock = sum(1 for m in meds if m["current_quantity"] == 0)
+        
+        expired = 0
+        expiring_soon = 0
+        today = datetime.now()
+        
+        for m in meds:
+            try:
+                exp_date = datetime.fromisoformat(m["expiry_date"])
+                if exp_date < today:
+                    expired += 1
+                elif exp_date < today + timedelta(days=30):
+                    expiring_soon += 1
+            except:
+                pass
+
+        return jsonify({
+            "success": True,
+            "total": len(meds),
+            "low_stock": low_stock,
+            "out_of_stock": out_of_stock,
+            "expired": expired,
+            "expiring_soon": expiring_soon
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/medicines")
+@login_required
+def api_medicines():
+    """API endpoint to get all medicines"""
+    try:
+        table = dynamodb.Table(MEDICINE_TABLE)
+        medicines = decimal_to_float(table.scan().get("Items", []))
+        return jsonify({"success": True, "medicines": medicines})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+# --------------------------------------------------
+# Error Handlers
+# --------------------------------------------------
+@app.errorhandler(404)
+def not_found(e):
+    """Handle 404 errors"""
+    return render_template("404.html"), 404
+
+
+@app.errorhandler(500)
+def internal_error(e):
+    """Handle 500 errors"""
+    return render_template("500.html"), 500
 
 
 # --------------------------------------------------
 # App Start
 # --------------------------------------------------
 if __name__ == "__main__":
+    print("=" * 60)
+    print(" " * 15 + "MediStock - Hospital Inventory System")
+    print("=" * 60)
+    print("\nInitializing database tables...")
     init_tables()
+    print("\nCreating default user...")
+    init_default_user()
+    print("=" * 60)
+    print("\n✓ Application ready!")
+    print("✓ Server starting on http://0.0.0.0:5000")
+    print("✓ Default Login -> Username: admin | Password: admin123")
+    print("=" * 60 + "\n")
     app.run(host="0.0.0.0", port=5000, debug=True)
