@@ -253,49 +253,40 @@ def add_medicine():
     return render_template("add_medicine.html")
 from decimal import Decimal
 
-@app.route('/edit_medicine/<medicine_id>', methods=['GET', 'POST'])
-@login_required
+@app.route("/edit_medicine/<medicine_id>", methods=["GET", "POST"])
 def edit_medicine(medicine_id):
-
-    if request.method == 'POST':
-        medicine_name = request.form.get('medicine_name')
-        quantity = int(request.form.get('quantity', 0))
-        price = Decimal(request.form.get('price', '0'))
-        threshold = int(request.form.get('threshold', 0))
+    if request.method == "POST":
+        data = request.form
 
         medicines_table.update_item(
             Key={
-                'medicine_id': medicine_id   # ✅ MUST be primary key
+                "medicine_id": medicine_id   # ✅ MUST MATCH TABLE KEY
             },
             UpdateExpression="""
-                SET medicine_name = :name,
+                SET #n = :name,
                     quantity = :qty,
                     price = :price,
-                    threshold = :th
+                    expiry_date = :expiry
             """,
+            ExpressionAttributeNames={
+                "#n": "name"
+            },
             ExpressionAttributeValues={
-                ':name': medicine_name,
-                ':qty': quantity,
-                ':price': price,
-                ':th': threshold
+                ":name": data.get("name"),
+                ":qty": int(data.get("quantity", 0)),
+                ":price": Decimal(data.get("price", "0")),
+                ":expiry": data.get("expiry_date")
             }
         )
 
-        # 🔔 Low stock email
-        if quantity <= threshold:
-            message = f"{medicine_name} stock is low ({quantity})"
-            send_low_stock_email(session['email'], message)
+        return redirect(url_for("medicines"))
 
-        flash("Medicine updated successfully")
-        return redirect(url_for('medicines'))
-
-    # GET request – load existing data
     response = medicines_table.get_item(
-        Key={'medicine_id': medicine_id}
+        Key={"medicine_id": medicine_id}
     )
+    medicine = response.get("Item")
 
-    medicine = response.get('Item')
-    return render_template('edit_medicine.html', medicine=medicine)
+    return render_template("edit_medicine.html", medicine=medicine)
 
     # ---------- GET REQUEST ----------
     response = medicines_table.get_item(
