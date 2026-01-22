@@ -4,6 +4,10 @@ from boto3.dynamodb.conditions import Attr
 from decimal import Decimal
 from datetime import datetime
 import uuid
+from boto3.dynamodb.conditions import Attr
+from db import users_table
+
+
 
 app = Flask(__name__)
 app.secret_key = "super-secret-key"
