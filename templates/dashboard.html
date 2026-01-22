@@ -19,7 +19,7 @@
                 <div class="card-body">
                     <h6 class="card-title">Total Medicines</h6>
                     <h2 class="fw-bold">
-                        {{ stats.total_medicines | default(0) }}
+                        {{ stats.total_medicines }}
                     </h2>
                 </div>
             </div>
@@ -31,7 +31,7 @@
                 <div class="card-body">
                     <h6 class="card-title">Total Value</h6>
                     <h2 class="fw-bold">
-                        ₹ {{ stats.total_value | default(0) }}
+                        ₹ {{ stats.total_value }}
                     </h2>
                 </div>
             </div>
@@ -43,7 +43,7 @@
                 <div class="card-body">
                     <h6 class="card-title">Low Stock Items</h6>
                     <h2 class="fw-bold">
-                        {{ stats.low_stock | default(0) }}
+                        {{ stats.low_stock }}
                     </h2>
                 </div>
             </div>
@@ -55,7 +55,7 @@
                 <div class="card-body">
                     <h6 class="card-title">Expired Items</h6>
                     <h2 class="fw-bold">
-                        {{ stats.expired | default(0) }}
+                        {{ stats.expired }}
                     </h2>
                 </div>
             </div>
@@ -93,4 +93,5 @@
 {% endblock %}
 
                                         
+
 
