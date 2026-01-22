@@ -230,16 +230,19 @@ def medicines():
 import uuid
 from decimal import Decimal
 
+from decimal import Decimal
+import uuid
+
 @app.route("/add_medicine", methods=["GET", "POST"])
 def add_medicine():
     if request.method == "POST":
         data = request.form
 
         medicine = {
-            "id": str(uuid.uuid4()),
+            "medicine_id": str(uuid.uuid4()),  # ✅ MUST MATCH TABLE KEY
             "name": data.get("name"),
             "quantity": int(data.get("quantity", 0)),
-            "price": Decimal(data.get("price", "0")),  # ✅ FIXED
+            "price": Decimal(data.get("price", "0")),
             "expiry_date": data.get("expiry_date")
         }
 
@@ -248,8 +251,6 @@ def add_medicine():
         return redirect(url_for("medicines"))
 
     return render_template("add_medicine.html")
-
-
 from decimal import Decimal
 
 @app.route('/edit_medicine/<medicine_id>', methods=['GET', 'POST'])
@@ -309,12 +310,11 @@ def edit_medicine(medicine_id):
 
     return render_template("edit_medicine.html", medicine=medicine)
 
-@app.route("/delete_medicine/<medicine_id>", methods=["POST"])
+@app.route("/delete_medicine/<medicine_id>")
 def delete_medicine(medicine_id):
     medicines_table.delete_item(
         Key={"medicine_id": medicine_id}
     )
-    flash("Medicine deleted successfully", "success")
     return redirect(url_for("medicines"))
 
 # ALERTS PAGE
