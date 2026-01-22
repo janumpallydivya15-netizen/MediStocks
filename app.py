@@ -21,7 +21,11 @@ MEDICINE_TABLE = 'MediStock_Medicines'
 USERS_TABLE = 'MediStock_Users'
 
 # SNS Topic ARN (to be configured)
-SNS_TOPIC_ARN = os.environ.get('SNS_TOPIC_ARN', arn:aws:sns:ap-south-1:120121146931:MediStockAlerts
+SNS_TOPIC_ARN = os.environ.get(
+    "SNS_TOPIC_ARN",
+    "arn:aws:sns:ap-south-1:120121146931:MediStockAlerts"
+)
+
 # Helper function to convert float to Decimal for DynamoDB
 def convert_to_decimal(obj):
     if isinstance(obj, float):
