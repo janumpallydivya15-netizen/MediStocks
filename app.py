@@ -1,32 +1,22 @@
-
-
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
-from werkzeug.security import generate_password_hash, check_password_hash
+from flask import Flask, render_template, request, redirect, url_for, session
 import boto3
-from decimal import Decimal
 from boto3.dynamodb.conditions import Attr
-from datetime import datetime, date
-from functools import wraps
-import logging
+from decimal import Decimal
+from datetime import datetime
 import uuid
-from dotenv import load_dotenv
-
-# =================================================
-# LOAD ENV
-# =================================================
-load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = "super-secret-key"
 
-AWS_REGION = "ap-south-1"
-SNS_TOPIC_ARN = os.environ.get("SNS_TOPIC_ARN")
+# ================= DYNAMODB (GLOBAL – DO NOT MOVE) =================
+dynamodb = boto3.resource(
+    "dynamodb",
+    region_name="ap-south-1"
+)
 
-sns_client = boto3.client("sns", region_name=AWS_REGION)
-
-MEDICINES_TABLE = os.getenv("DYNAMODB_TABLE_MEDICINES", "MediStock_Medicines")
-USERS_TABLE = os.getenv("DYNAMODB_TABLE_USERS", "MediStock_Users")
-
+MEDICINE_TABLE = dynamodb.Table("MediStock_Medicines")
+USER_TABLE = dynamodb.Table("MediStock_Users")
+# ==================================================================
 # ================= SNS CONFIG (FIXED) =================
 SNS_TOPIC_ARN = "arn:aws:sns:ap-south-1:120121146931:MediStockAlerts"
 
@@ -34,14 +24,6 @@ sns_client = boto3.client(
     "sns",
     region_name=AWS_REGION
 )
-
-# ================= DYNAMODB =================
-# ================= DYNAMODB SETUP =================
-dynamodb = boto3.resource("dynamodb", region_name="ap-south-1")
-table = dynamodb.Table("MediStock_Medicines")
-
-medicines_table = dynamodb.Table(MEDICINES_TABLE)
-users_table = dynamodb.Table(USERS_TABLE)
 from boto3.dynamodb.conditions import Attr
 
 def get_user_medicines(user_id):
