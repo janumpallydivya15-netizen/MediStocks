@@ -1,6 +1,4 @@
-# MUST BE FIRST
-import os
-os.environ["AWS_DEFAULT_REGION"] = "ap-south-1"
+
 
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -19,7 +17,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", "dev_secret")
+app.secret_key = "super-secret-key"
 
 AWS_REGION = "ap-south-1"
 SNS_TOPIC_ARN = os.environ.get("SNS_TOPIC_ARN")
@@ -259,11 +257,6 @@ def add_medicine_page():
 
 @app.route("/add-medicine", methods=["POST"])
 def add_medicine():
-    if "user_id" not in session:
-        return redirect(url_for("login"))
-
-    data = request.form
-
     MEDICINE_TABLE.put_item(
         Item={
             "medicine_id": str(uuid.uuid4()),
