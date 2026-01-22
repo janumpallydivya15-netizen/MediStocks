@@ -301,44 +301,56 @@ def logout():
 # --------------------------------------------------
 # Routes - Dashboard
 # --------------------------------------------------
-from datetime import datetime
-
 @app.route("/dashboard")
 @login_required
 def dashboard():
     meds = get_all_medicines()
 
     total_medicines = len(meds)
+    total_value = 0.0
     low_stock = 0
     expired = 0
-    total_value = 0.0
 
     today = datetime.today().date()
 
     for m in meds:
-        qty = int(m.get("current_quantity", 0))
-        threshold = int(m.get("threshold_quantity", 0))
-        price = float(m.get("price", 0))
+        try:
+            qty = int(m.get("current_quantity", 0))
+        except:
+            qty = 0
 
+        try:
+            threshold = int(m.get("threshold_quantity", 0))
+        except:
+            threshold = 0
+
+        try:
+            price = float(m.get("price", 0))
+        except:
+            price = 0.0
+
+        # TOTAL VALUE (shared across all users)
         total_value += qty * price
 
+        # LOW STOCK
         if qty <= threshold:
             low_stock += 1
 
+        # EXPIRED
         expiry = m.get("expiry_date")
         if expiry:
             try:
                 expiry_date = datetime.strptime(expiry, "%Y-%m-%d").date()
                 if expiry_date < today:
                     expired += 1
-            except ValueError:
+            except:
                 pass
 
     stats = {
         "total_medicines": total_medicines,
+        "total_value": round(total_value, 2),
         "low_stock": low_stock,
-        "expired": expired,
-        "total_value": round(total_value, 2)
+        "expired": expired
     }
 
     return render_template(
@@ -404,6 +416,7 @@ def inventory():
 
 import uuid
 from flask import request, redirect, url_for, render_template
+from datetime import datetime
 
 @app.route("/add_medicine", methods=["GET", "POST"])
 @login_required
@@ -411,20 +424,23 @@ def add_medicine():
     if request.method == "POST":
         table = dynamodb.Table(MEDICINES_TABLE)
 
-        medicine_id = str(uuid.uuid4())
+        qty = request.form.get("current_quantity", "0")
+        threshold = request.form.get("threshold_quantity", "0")
+        price = request.form.get("price", "0")
 
         item = {
-            "medicine_id": medicine_id,
+            "medicine_id": str(uuid.uuid4()),
             "medicine_name": request.form.get("medicine_name", "").strip(),
-            "current_quantity": request.form.get("current_quantity", "0"),
-            "threshold_quantity": request.form.get("threshold_quantity", "0"),
-            "price": request.form.get("price", "0"),
+
+            # FORCE VALID NUMERIC VALUES
+            "current_quantity": str(int(qty) if qty else 0),
+            "threshold_quantity": str(int(threshold) if threshold else 0),
+            "price": str(float(price) if price else 0),
         }
 
-        # expiry_date is optional
         expiry_date = request.form.get("expiry_date")
         if expiry_date:
-            item["expiry_date"] = expiry_date
+            item["expiry_date"] = expiry_date  # YYYY-MM-DD
 
         table.put_item(Item=item)
 
