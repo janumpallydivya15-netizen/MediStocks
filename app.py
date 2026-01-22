@@ -7,7 +7,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import boto3
 from decimal import Decimal
 from boto3.dynamodb.conditions import Attr
-from datetime import datetime, timedelta
+from datetime import datetime, date
 from functools import wraps
 import logging
 import uuid
@@ -171,7 +171,8 @@ def dashboard():
     )
     medicines = response.get("Items", [])
 
-    today = date.today()
+    today = datetime.date.today()
+
 
     total_medicines = len(medicines)
     total_value = Decimal("0")
