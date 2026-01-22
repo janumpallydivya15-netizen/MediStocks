@@ -162,34 +162,34 @@ def logout():
 # =================================================
 # DASHBOARD
 # =================================================
+from boto3.dynamodb.conditions import Attr
+
 @app.route("/dashboard")
 def dashboard():
-    response = medicines_table.scan()
+    user_id = session["user_id"]
+
+    response = medicines_table.scan(
+        FilterExpression=Attr("user_id").eq(user_id)
+    )
     medicines = response.get("Items", [])
 
     total_medicines = len(medicines)
-    low_stock = 0
-    expired = 0
 
-    today = datetime.today().date()
-
-    # Calculate total value
     total_value = sum(
-        int(item.get("quantity", 0)) * float(item.get("price", 0))
-        for item in medicines
+        int(m.get("quantity", 0)) * float(m.get("price", 0))
+        for m in medicines
     )
 
-    # Stats dictionary for template
+    low_stock = sum(1 for m in medicines if int(m.get("quantity", 0)) < 10)
+
     stats = {
         "total_medicines": total_medicines,
         "total_value": round(total_value, 2),
-        "low_stock": low_stock,
-        "expired": expired
+        "low_stock": low_stock
     }
 
-    print("STATS DEBUG:", stats)
-
     return render_template("dashboard.html", stats=stats)
+
 @app.route("/update_stock", methods=["POST"])
 def update_stock():
     data = request.json
