@@ -160,6 +160,20 @@ def log_alert(medicine, current_qty, threshold):
     except Exception as e:
         print(f"✗ Error logging alert: {str(e)}")
 
+def get_all_medicines():
+    table = dynamodb.Table(MEDICINES_TABLE)
+
+    response = table.scan()
+    items = response.get("Items", [])
+
+    # Handle DynamoDB pagination
+    while "LastEvaluatedKey" in response:
+        response = table.scan(
+            ExclusiveStartKey=response["LastEvaluatedKey"]
+        )
+        items.extend(response.get("Items", []))
+
+    return items
 
 # --------------------------------------------------
 # Routes - Authentication
