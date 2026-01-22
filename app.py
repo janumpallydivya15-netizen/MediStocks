@@ -103,27 +103,25 @@ def send_low_stock_email(medicine_name, quantity):
 # =================================================
 # AUTH ROUTES
 # =================================================
-@app.route("/", methods=["GET", "POST"])
+@app.route("/login", methods=["POST"])
 def login():
-    if request.method == "POST":
-        email = request.form["email"]
-        password = request.form["password"]
+    email = request.form.get("email")
+    password = request.form.get("password")
 
-       res = USER_TABLE.scan(FilterExpression=Attr("email").eq(email))
+    if not email or not password:
+        return "Email and password required", 400
 
-        users = res.get("Items", [])
+    res = USER_TABLE.scan(
+        FilterExpression=Attr("email").eq(email)
+    )
 
-        if not users or not check_password_hash(users[0]["password"], password):
-            flash("Invalid login", "danger")
-            return render_template("login.html")
+    if res["Items"]:
+        user = res["Items"][0]
+        if user["password"] == password:
+            session["user"] = user["email"]
+            return redirect(url_for("dashboard"))
 
-        user = users[0]
-        session["user_id"] = user["user_id"]
-        session["email"] = user["email"]
-
-        return redirect(url_for("dashboard"))
-
-    return render_template("login.html")
+    return "Invalid email or password", 401
 
 
 @app.route("/signup", methods=["GET", "POST"])
