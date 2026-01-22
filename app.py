@@ -402,53 +402,35 @@ def inventory():
         return render_template("medicines.html", medicines=[], username=session.get("username"))
 
 
+import uuid
+from flask import request, redirect, url_for, render_template
+
 @app.route("/add_medicine", methods=["GET", "POST"])
 @login_required
 def add_medicine():
-    """Add new medicine to inventory"""
     if request.method == "POST":
-        try:
-            table = dynamodb.Table(MEDICINE_TABLE)
+        table = dynamodb.Table(MEDICINES_TABLE)
 
-            # Validate inputs
-            medicine_name = request.form.get("medicine_name", "").strip()
-            category = request.form.get("category", "").strip()
-            current_quantity = request.form.get("current_quantity", "0")
-            threshold_quantity = request.form.get("threshold_quantity", "0")
-            expiry_date = request.form.get("expiry_date", "")
-            batch_number = request.form.get("batch_number", "").strip()
-            manufacturer = request.form.get("manufacturer", "").strip()
-            unit_price = request.form.get("unit_price", "0")
+        medicine_id = str(uuid.uuid4())
 
-            if not all([medicine_name, category, expiry_date]):
-                flash("Medicine name, category, and expiry date are required", "danger")
-                return render_template("add_medicine.html")
+        item = {
+            "medicine_id": medicine_id,
+            "medicine_name": request.form.get("medicine_name", "").strip(),
+            "current_quantity": request.form.get("current_quantity", "0"),
+            "threshold_quantity": request.form.get("threshold_quantity", "0"),
+            "price": request.form.get("price", "0"),
+        }
 
-            item = {
-                "medicine_id": str(uuid.uuid4()),
-                "medicine_name": medicine_name,
-                "category": category,
-                "current_quantity": Decimal(current_quantity),
-                "threshold_quantity": Decimal(threshold_quantity),
-                "expiry_date": expiry_date,
-                "batch_number": batch_number if batch_number else "N/A",
-                "manufacturer": manufacturer if manufacturer else "N/A",
-                "unit_price": Decimal(unit_price) if unit_price else Decimal("0"),
-                "added_by": session.get("username", "Unknown"),
-                "added_date": datetime.now().isoformat()
-            }
+        # expiry_date is optional
+        expiry_date = request.form.get("expiry_date")
+        if expiry_date:
+            item["expiry_date"] = expiry_date
 
-            table.put_item(Item=item)
-            flash(f"Medicine '{medicine_name}' added successfully", "success")
-            return redirect(url_for("inventory"))
+        table.put_item(Item=item)
 
-        except ValueError as e:
-            flash("Invalid quantity or price values. Please enter valid numbers.", "danger")
-        except Exception as e:
-            flash(f"Error adding medicine: {str(e)}", "danger")
+        return redirect(url_for("dashboard"))
 
     return render_template("add_medicine.html")
-
 
 @app.route("/edit_medicine/<medicine_id>", methods=["GET", "POST"])
 @login_required
