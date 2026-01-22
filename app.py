@@ -297,14 +297,11 @@ def dashboard():
         threshold = int(m.get("threshold_quantity", 0))
         price = float(m.get("price", 0))
 
-        # total stock value
         total_value += qty * price
 
-        # low stock check
         if qty <= threshold:
             low_stock += 1
 
-        # expired check
         expiry = m.get("expiry_date")
         if expiry:
             try:
@@ -326,24 +323,6 @@ def dashboard():
         stats=stats,
         meds=meds
     )
-    
-        return render_template(
-            "dashboard.html",
-            total=total_medicines,
-            low_stock=low_stock,
-            out_of_stock=out_of_stock,
-            expired=expired,
-            expiring_soon=expiring_soon,
-            total_stock=total_stock,
-            recent_alerts=recent_alerts,
-            username=session.get("username"),
-            role=session.get("role", "user")
-        )
-    except Exception as e:
-        flash(f"Error loading dashboard: {str(e)}", "danger")
-        return render_template("dashboard.html", total=0, low_stock=0, expired=0, 
-                             username=session.get("username"), role=session.get("role", "user"))
-
 
 # --------------------------------------------------
 # Routes - Medicines/Inventory
