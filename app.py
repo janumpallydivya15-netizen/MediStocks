@@ -157,6 +157,29 @@ def log_alert(medicine, current_qty, threshold):
         })
     except Exception as e:
         print(f"✗ Error logging alert: {str(e)}")
+def create_table(table_name, primary_key):
+    try:
+        table = dynamodb.Table(table_name)
+        table.load()
+        print(f"Table already exists: {table_name}")
+        return
+    except Exception:
+        pass
+
+    print(f"Creating table: {table_name}")
+
+    table = dynamodb.create_table(
+        TableName=table_name,
+        KeySchema=[
+            {"AttributeName": primary_key, "KeyType": "HASH"}
+        ],
+        AttributeDefinitions=[
+            {"AttributeName": primary_key, "AttributeType": "S"}
+        ],
+        BillingMode="PAY_PER_REQUEST"
+    )
+
+    table.wait_until_exists()
 
 MEDICINES_TABLE = "MediStock_Medicines"
 
