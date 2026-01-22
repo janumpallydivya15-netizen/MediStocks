@@ -181,13 +181,18 @@ def dashboard():
 total_value = sum(
     int(item.get('quantity', 0)) * float(item.get('price', 0))
     for item in items)
+@app.route("/update_stock", methods=["POST"])
+def update_stock():
+    data = request.json
+    med_id = data["id"]
+    qty = int(data["quantity"])
 
-      med = get_medicine_by_id(med_id)
-qty = int(med.get("quantity", 0))
+    med = get_medicine_by_id(med_id)
 
-if qty < 10:
-    send_low_stock_email(med)
+    if qty < 10:
+        send_low_stock_email(med)
 
+    return jsonify({"status": "ok"})
 
         expiry_str = med.get("expiry_date")
         if expiry_str:
