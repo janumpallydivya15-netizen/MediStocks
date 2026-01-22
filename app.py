@@ -44,12 +44,18 @@ table = dynamodb.Table("MediStock_Medicines")
 
 medicines_table = dynamodb.Table(MEDICINES_TABLE)
 users_table = dynamodb.Table(USERS_TABLE)
-def get_all_medicines():
-    response = table.scan()
+from boto3.dynamodb.conditions import Attr
+
+def get_user_medicines(user_id):
+    response = table.scan(
+        FilterExpression=Attr("user_id").eq(user_id)
+    )
+
     items = response.get("Items", [])
 
     while "LastEvaluatedKey" in response:
         response = table.scan(
+            FilterExpression=Attr("user_id").eq(user_id),
             ExclusiveStartKey=response["LastEvaluatedKey"]
         )
         items.extend(response.get("Items", []))
@@ -161,7 +167,12 @@ def logout():
 # =================================================
 @app.route("/dashboard")
 def dashboard():
-    medicines = get_all_medicines()
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
+    user_id = session["user_id"]
+
+    medicines = get_user_medicines(user_id)
 
     total_medicines = len(medicines)
     total_value = Decimal("0")
@@ -186,19 +197,15 @@ def dashboard():
             if expiry_date < today:
                 expired += 1
 
-    print("MEDICINES:", medicines)
-    print("TOTAL VALUE:", total_value)
-
-    return render_template("dashboard.html",
-    stats={
-        "total_medicines": total_medicines,
-        "total_value": total_value,
-        "low_stock": low_stock,
-        "expired": expired
-    }
-)
-
-
+    return render_template(
+        "dashboard.html",
+        stats={
+            "total_medicines": total_medicines,
+            "total_value": total_value,
+            "low_stock": low_stock,
+            "expired": expired
+        }
+    )
 @app.route("/update_stock", methods=["POST"])
 def update_stock():
     data = request.json
@@ -249,6 +256,7 @@ def add_medicine():
 
         medicine = {
             "medicine_id": str(uuid.uuid4()),  # ✅ MUST MATCH TABLE KEY
+            "user_id": session["user_id"]
             "name": data.get("name"),
             "quantity": int(data.get("quantity", 0)),
             "price": Decimal(data.get("price", "0")),
