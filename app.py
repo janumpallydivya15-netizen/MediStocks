@@ -23,10 +23,8 @@ AWS_REGION = "ap-south-1"
 dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
 sns_client = boto3.client("sns", region_name=AWS_REGION)
 
-# --------------------------------------------------
-# DynamoDB Table Names
-# --------------------------------------------------
-MEDICINE_TABLE = "MediStock_Medicines"
+# ---------- DynamoDB Table Names ----------
+MEDICINES_TABLE = "MediStock_Medicines"
 USERS_TABLE = "MediStock_Users"
 ALERT_LOGS_TABLE = "MediStock_AlertLogs"
 
@@ -160,9 +158,10 @@ def log_alert(medicine, current_qty, threshold):
     except Exception as e:
         print(f"✗ Error logging alert: {str(e)}")
 
+MEDICINES_TABLE = "MediStock_Medicines"
+
 def get_all_medicines():
     table = dynamodb.Table(MEDICINES_TABLE)
-
     response = table.scan()
     items = response.get("Items", [])
 
