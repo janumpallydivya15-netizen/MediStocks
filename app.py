@@ -26,39 +26,8 @@ SNS_TOPIC_ARN = os.environ.get("SNS_TOPIC_ARN")
 
 sns_client = boto3.client("sns", region_name=AWS_REGION)
 
-def send_low_stock_email(medicine_name, quantity):
-    if not SNS_TOPIC_ARN:
-        print("❌ SNS_TOPIC_ARN is not set")
-        return
-
-    message = (
-        f"⚠️ LOW STOCK ALERT ⚠️\n\n"
-        f"Medicine: {medicine_name}\n"
-        f"Remaining Quantity: {quantity}\n\n"
-        f"Please restock immediately."
-    )
-
-    response = sns_client.publish(
-        TopicArn=SNS_TOPIC_ARN,
-        Message=message,
-        Subject="Low Medicine Stock Alert"
-    )
-
-    print("✅ SNS message sent:", response["MessageId"])
-
 MEDICINES_TABLE = os.getenv("DYNAMODB_TABLE_MEDICINES", "MediStock_Medicines")
 USERS_TABLE = os.getenv("DYNAMODB_TABLE_USERS", "MediStock_Users")
-def get_all_medicines():
-    response = table.scan()
-    items = response.get("Items", [])
-
-    # Handle pagination (VERY IMPORTANT)
-    while "LastEvaluatedKey" in response:
-        response = table.scan(ExclusiveStartKey=response["LastEvaluatedKey"])
-        items.extend(response.get("Items", []))
-
-    return items
-
 
 # ================= SNS CONFIG (FIXED) =================
 SNS_TOPIC_ARN = "arn:aws:sns:ap-south-1:120121146931:MediStockAlerts"
@@ -70,10 +39,23 @@ sns_client = boto3.client(
 
 # ================= DYNAMODB =================
 # ================= DYNAMODB SETUP =================
-dynamodb = boto3.resource("dynamodb", region_name=AWS_REGION)
+dynamodb = boto3.resource("dynamodb", region_name="ap-south-1")
+table = dynamodb.Table("Medicines")   # 👈 EXACT table name in AWS
 
 medicines_table = dynamodb.Table(MEDICINES_TABLE)
 users_table = dynamodb.Table(USERS_TABLE)
+def get_all_medicines():
+    response = table.scan()
+    items = response.get("Items", [])
+
+    while "LastEvaluatedKey" in response:
+        response = table.scan(
+            ExclusiveStartKey=response["LastEvaluatedKey"]
+        )
+        items.extend(response.get("Items", []))
+
+    return items
+
 
 # ================= LOGGING =================
 logging.basicConfig(level=logging.INFO)
@@ -108,18 +90,22 @@ def login_required(f):
 
 
 # ================= EMAIL FUNCTION (ADD HERE) =================
-def send_low_stock_alert(medicine_name, quantity):
+def send_low_stock_email(medicine_name, quantity):
+    if not SNS_TOPIC_ARN:
+        print("❌ SNS_TOPIC_ARN is not set")
+        return
+
     message = (
-        f"⚠️ LOW STOCK ALERT\n\n"
+        f"⚠️ LOW STOCK ALERT ⚠️\n\n"
         f"Medicine: {medicine_name}\n"
-        f"Available Quantity: {quantity}\n\n"
+        f"Remaining Quantity: {quantity}\n\n"
         f"Please restock immediately."
     )
 
-    sns_client.publish(
+    response = sns_client.publish(
         TopicArn=SNS_TOPIC_ARN,
         Message=message,
-        Subject="⚠️ Low Medicine Stock Alert"
+        Subject="Low Medicine Stock Alert"
     )
 
 # =================================================
@@ -173,15 +159,12 @@ def logout():
 # =================================================
 # DASHBOARD
 # =================================================
-from decimal import Decimal
-from datetime import datetime
-
 @app.route("/dashboard")
 def dashboard():
-    medicines = get_all_medicines()  # list of dicts
+    medicines = get_all_medicines()
 
     total_medicines = len(medicines)
-    total_value = Decimal("0.00")
+    total_value = Decimal("0")
     low_stock = 0
     expired = 0
 
@@ -196,17 +179,15 @@ def dashboard():
 
         if qty < threshold:
             low_stock += 1
-           
+
         expiry = med.get("expiry_date")
         if expiry:
             expiry_date = datetime.strptime(expiry, "%Y-%m-%d").date()
             if expiry_date < today:
                 expired += 1
-                 # 🔍 DEBUG PRINTS — ADD HERE
+
     print("MEDICINES:", medicines)
     print("TOTAL VALUE:", total_value)
-    print("LOW STOCK:", low_stock)
-    print("EXPIRED:", expired)
 
     return render_template(
         "dashboard.html",
