@@ -189,13 +189,15 @@ def dashboard():
     print("MEDICINES:", medicines)
     print("TOTAL VALUE:", total_value)
 
-    return render_template(
-        "dashboard.html",
-        total_medicines=total_medicines,
-        total_value=total_value,
-        low_stock=low_stock,
-        expired=expired
-    )
+    return render_template("dashboard.html",
+    stats={
+        "total_medicines": total_medicines,
+        "total_value": total_value,
+        "low_stock": low_stock,
+        "expired": expired
+    }
+)
+
 
 @app.route("/update_stock", methods=["POST"])
 def update_stock():
