@@ -105,7 +105,8 @@ def login():
         email = request.form["email"]
         password = request.form["password"]
 
-        res = users_table.scan(FilterExpression=Attr("email").eq(email))
+       res = USER_TABLE.scan(FilterExpression=Attr("email").eq(email))
+
         users = res.get("Items", [])
 
         if not users or not check_password_hash(users[0]["password"], password):
