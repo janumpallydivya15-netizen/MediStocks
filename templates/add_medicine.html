@@ -1,15 +1,8 @@
-<form method="POST" action="{{ url_for('add_medicine') }}">
-    <label>Medicine Name</label>
-    <input type="text" name="name" required>
-
-    <label>Quantity</label>
-    <input type="number" name="quantity" required>
-
-    <label>Price</label>
-    <input type="number" step="0.01" name="price" required>
-
-    <label>Expiry Date</label>
-    <input type="date" name="expiry_date" required>
-
+<form action="/add-medicine" method="POST">
+    <input type="text" name="name" placeholder="Medicine name" required>
+    <input type="number" name="price" placeholder="Price" required>
+    <input type="number" name="quantity" placeholder="Quantity" required>
+    <input type="number" name="threshold" placeholder="Threshold">
+    <input type="date" name="expiry_date">
     <button type="submit">Add Medicine</button>
 </form>
